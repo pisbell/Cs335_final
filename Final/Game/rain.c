@@ -58,6 +58,50 @@ int yres=600;
 int pad; // For empty space on sides of screen
 int halfpad;
 
+
+//ship global declarations 
+int tFighter      = 1;
+int tBomber       = 2;
+int tIntercepter  = 3;
+int tOpressor     = 4;
+int aWing         = 5;
+int xWing         = 6;
+int Diffculty     = 0;
+
+
+int statsHealth  [6][3] = { 
+    { 100, 200, 300},
+    {  50,  75, 150},
+    { 200, 300, 400},
+    { 300, 400, 500},
+    {1000, 800, 650},
+    { 800, 750, 600}
+};
+int statsShields [6][3] = {
+    { 100, 200, 300},
+    { 150, 225, 350},
+    {  50,  75, 150},
+    { 100, 200, 300},
+    {1000, 700, 500},
+    { 750, 500, 350}
+};
+int statsDamage  [6][3] = {
+    { 100, 175, 225},
+    { 150, 250, 300},
+    {   2,   6,   9},
+    { 400, 500, 600},
+    {  75,  75,  75},
+    { 100, 100, 100}
+};
+int statsShotfreq[6][3] = {
+    {  15,  25,  40},
+    {   5,  15,  25},
+    {  40,  70,  95},
+    {   5,  10,  15},
+    {   2,   2,   2},
+    {   5,   5,   5}
+};
+
 typedef struct t_raindrop {
 	int type;
 	int linewidth;
@@ -72,6 +116,19 @@ typedef struct t_raindrop {
 	struct t_raindrop *prev;
 	struct t_raindrop *next;
 } Raindrop;
+
+typedef struct ships {
+    int shiptype;
+    int health;
+    int shields;
+    int damage;
+    int shotfreq;
+    Vec pos;
+    Vec vel;
+    Vec maxvel;
+    Vec lastpos;
+} Ship;
+
 
 Raindrop *ihead=NULL;
 void delete_rain(Raindrop *node);
@@ -457,7 +514,7 @@ void physics(void)
 		node->sound=0;
 		node->pos[0] = (rnd() * (float)(xres-pad-600));
 		node->pos[0] += halfpad+100;
-		node->pos[1] = rnd()*100 + 900;//rnd() * 100.0f + (float)yres;
+		node->pos[1] = (float)yres - 100 - rnd()*50;//rnd() * 100.0f + (float)yres;
 		VecCopy(node->pos, node->lastpos);
 		node->vel[0] = 
 		node->vel[1] = 0.0f;

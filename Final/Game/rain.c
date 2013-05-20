@@ -9,7 +9,6 @@
 #include <time.h>
 
 //These components can be turned on and off
-#define USE_SOUND
 #define USE_FONTS
 #define USE_UMBRELLA
 #define USE_LOG
@@ -18,15 +17,8 @@
 #ifdef USE_LOG
 #include "log.h"
 #endif //USE_LOG
-
 #include "defs.h"
 #include <GL/glfw.h>
-
-#ifdef USE_SOUND
-#include <FMOD/fmod.h>
-#include <FMOD/wincompat.h>
-#include "fmod.h"
-#endif //USE_SOUND
 
 #ifdef USE_FONTS
 #include "fonts.h"
@@ -105,7 +97,6 @@ int statsShotfreq[6][3] = {
 typedef struct t_raindrop {
 	int type;
 	int linewidth;
-	int sound;
 	Vec pos;
 	Vec lastpos;
 	Vec vel;
@@ -160,9 +151,6 @@ int maxrain=0;
 int show_rain      = 1;
 int show_text      = 0;
 
-#ifdef USE_SOUND
-int play_sounds    = 0;
-#endif //USE_SOUND
 
 int main(int argc, char **argv)
 {
@@ -172,17 +160,7 @@ int main(int argc, char **argv)
 	GLFWvidmode glist[256];
 	open_log_file();
 	srand((unsigned int)time(NULL));
-
-	#ifdef USE_SOUND
-	//FMOD_RESULT result;
-	if (fmod_init()) return 1;
-	if (fmod_createsound("../media/tick.wav", 0)) return 1;
-	if (fmod_createsound("../media/drip.wav", 1)) return 1;
-	fmod_setmode(0,FMOD_LOOP_OFF);
-	//fmod_playsound(0);
-	//fmod_systemupdate();
-	#endif //USE_SOUND
-
+	//
 	glfwInit();
 	srand(time(NULL));
 	nmodes = glfwGetVideoModes(glist, 100);
@@ -225,11 +203,6 @@ int main(int argc, char **argv)
 	close_log_file();
 	printf("totrain: %i  maxrain: %i\n",totrain,maxrain);
 	glfwTerminate();
-
-	#ifdef USE_SOUND
-	fmod_cleanup();
-	#endif //USE_SOUND
-
 	#ifdef USE_FONTS
 	cleanup_fonts();
 	#endif //USE_FONTS
@@ -263,12 +236,6 @@ void checkkey(int k1, int k2)
 		show_rain ^= 1;
 		return;
 	}
-	#ifdef USE_SOUND
-	if (k1 == 'S') {
-		play_sounds ^= 1;
-		return;
-	}
-	#endif //USE_SOUND
 	if (k1 == 'T') {
 		show_text ^= 1;
 		return;
@@ -422,9 +389,6 @@ void render(GLvoid)
 		ggprint12(&r, 16, 0x00cc6622, "<P> Shape: %s",umbrella.shape==1?"Round":"Flat");
 		ggprint12(&r, 16, 0x00cc6622, "<D> Deflection: %s",deflection==1?"On":"Off");
 		//#endif //USE_UMBRELLA
-		#ifdef USE_SOUND
-		ggprint12(&r, 20, 0x00cc6622, "<S> Sound: %s",play_sounds==1?"On":"Off");
-		#endif //USE_SOUND
 		ggprint12(&r, 16, 0x00aaaa00, "total drops: %i",totrain);
 		ggprint12(&r, 16, 0x00aaaa00, "max drops: %i\n",maxrain);
 	}
@@ -557,20 +521,7 @@ void physics(void)
 		Raindrop *node = ihead;
 		while(node) {
 			n++;
-			#ifdef USE_SOUND
-			if (node->pos[1] < 0.0f) {
-				//raindrop hit ground
-				if (!node->sound && play_sounds) {
-					//small chance that a sound will play
-					r = random(100);
-					if (r==1) fmod_playsound(0);
-					//if (r==2) fmod_playsound(1);
-					//sound plays once per raindrop
-					node->sound=1;
-				}
-			}
-			#endif //USE_SOUND
-		
+			//#ifdef USE_UMBRELLA
 			if (show_umbrella) {
 				//collision detection for raindrop on umbrella
 				if (umbrella.shape == UMBRELLA_FLAT) {

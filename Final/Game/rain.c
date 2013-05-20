@@ -475,7 +475,6 @@ void physics(void)
 			exit(EXIT_FAILURE);
 		}
 		node->prev = node->next = NULL;
-		node->sound=0;
 		node->pos[0] = (rnd() * (float)(xres-pad-600));
 		node->pos[0] += halfpad+100;
 		node->pos[1] = (float)yres - 100 - rnd()*50;//rnd() * 100.0f + (float)yres;

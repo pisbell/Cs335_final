@@ -34,6 +34,5 @@ bmp.o: bmp.c
 clean:
 	rm -f rain
 	rm -f log
-	rm -f fmod
 	rm -f *.o
 

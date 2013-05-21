@@ -119,7 +119,6 @@ typedef struct ships {
 	float width;
 	float width2;
 	float radius;
-	int shape;
 } Ship;
 
 
@@ -128,13 +127,9 @@ void delete_rain(Laser *node);
 void cleanup_raindrops(void);
 
 #ifdef USE_UMBRELLA
-#define UMBRELLA_FLAT  0
-#define UMBRELLA_ROUND 1
-
 Ship player_ship;
 GLuint umbrella_texture;
 GLuint background_texture;
-int deflection=0;
 int show_umbrella  = 0;
 void draw_umbrella(void);
 #endif //USE_UMBRELLA
@@ -264,19 +259,6 @@ void checkkey(int k1, int k2)
 			player_ship.radius = (float)player_ship.width2;
 			return;
 		}
-		if (k1 == 'P') {
-			//player_ship shape
-			if (player_ship.shape == UMBRELLA_FLAT) {
-				player_ship.shape = UMBRELLA_ROUND;
-				player_ship.radius = (float)player_ship.width2;
-			} else {
-				player_ship.shape = UMBRELLA_FLAT;
-			}
-			return;
-		}
-		if (k1 == 'D') {
-			deflection ^= 1;
-		}
 		if (k1 == GLFW_KEY_LEFT)  {
 			VecCopy(player_ship.pos, player_ship.lastpos);
 			player_ship.pos[0] -= 10.0;
@@ -305,8 +287,7 @@ void init(void)
 	VecCopy(player_ship.pos, player_ship.lastpos);
 	player_ship.width = 300.0;
 	player_ship.width2 = player_ship.width * 0.5;
-	//player_ship.radius = (float)player_ship.width2;
-	player_ship.shape = UMBRELLA_FLAT;
+	player_ship.radius = (float)player_ship.width2;
 	#endif //USE_UMBRELLA
 }
 
@@ -379,8 +360,6 @@ void render(GLvoid)
 		ggprint12(&r, 16, 0x00cc6622, "<R> Rain: %s",show_rain==1?"On":"Off");
 		//#ifdef USE_UMBRELLA
 		ggprint12(&r, 16, 0x00cc6622, "<U> Umbrella: %s",show_umbrella==1?"On":"Off");
-		ggprint12(&r, 16, 0x00cc6622, "<P> Shape: %s",player_ship.shape==1?"Round":"Flat");
-		ggprint12(&r, 16, 0x00cc6622, "<D> Deflection: %s",deflection==1?"On":"Off");
 		//#endif //USE_UMBRELLA
 		ggprint12(&r, 16, 0x00aaaa00, "total drops: %i",totrain);
 		ggprint12(&r, 16, 0x00aaaa00, "max drops: %i\n",maxrain);
@@ -389,32 +368,22 @@ void render(GLvoid)
 
 void draw_umbrella(void)
 {
-	if (player_ship.shape == UMBRELLA_FLAT) {
-		glColor4f(1.0f, 0.2f, 0.2f, 0.5f);
-		glLineWidth(8);
-		glBegin(GL_LINES);
-			glVertex2f(player_ship.pos[0]-player_ship.width2, player_ship.pos[1]);
-			glVertex2f(player_ship.pos[0]+player_ship.width2, player_ship.pos[1]);
-		glEnd();
-		glLineWidth(1);
-	} else {
-		glColor4f(1.0f, 1.0f, 1.0f, 0.8f);
-		glPushMatrix();
-		glTranslatef(player_ship.pos[0],player_ship.pos[1],player_ship.pos[2]);
-		glEnable(GL_ALPHA_TEST);
-		glAlphaFunc(GL_GREATER, 0.0f);
-		glBindTexture(GL_TEXTURE_2D, umbrella_texture);
-		glBegin(GL_QUADS);
-			float w = player_ship.width2;
-			glTexCoord2f(0.0f, 0.0f); glVertex2f(-w, -w);
-			glTexCoord2f(1.0f, 0.0f); glVertex2f( w, -w);
-			glTexCoord2f(1.0f, 1.0f); glVertex2f( w,  w);
-			glTexCoord2f(0.0f, 1.0f); glVertex2f(-w,  w);
-		glEnd();
-		glBindTexture(GL_TEXTURE_2D, 0);
-		glDisable(GL_ALPHA_TEST);
-		glPopMatrix();
-	}
+	glColor4f(1.0f, 1.0f, 1.0f, 0.8f);
+	glPushMatrix();
+	glTranslatef(player_ship.pos[0],player_ship.pos[1],player_ship.pos[2]);
+	glEnable(GL_ALPHA_TEST);
+	glAlphaFunc(GL_GREATER, 0.0f);
+	glBindTexture(GL_TEXTURE_2D, umbrella_texture);
+	glBegin(GL_QUADS);
+		float w = player_ship.width2;
+		glTexCoord2f(0.0f, 0.0f); glVertex2f(-w, -w);
+		glTexCoord2f(1.0f, 0.0f); glVertex2f( w, -w);
+		glTexCoord2f(1.0f, 1.0f); glVertex2f( w,  w);
+		glTexCoord2f(0.0f, 1.0f); glVertex2f(-w,  w);
+	glEnd();
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glDisable(GL_ALPHA_TEST);
+	glPopMatrix();
 }
 
 void draw_raindrops(void)
@@ -516,48 +485,15 @@ void physics(void)
 			//#ifdef USE_UMBRELLA
 			if (show_umbrella) {
 				//collision detection for raindrop on player_ship
-				if (player_ship.shape == UMBRELLA_FLAT) {
-					if (node->pos[0] >= (player_ship.pos[0] - player_ship.width2) &&
-						node->pos[0] <= (player_ship.pos[0] + player_ship.width2)) {
-						if (node->lastpos[1] > player_ship.lastpos[1] ||
-							node->lastpos[1] > player_ship.pos[1]) {
-							if (node->pos[1] <= player_ship.pos[1] ||
-								node->pos[1] <= player_ship.lastpos[1]) {
-								if (node->linewidth > 1) {
-									savenode = node->next;
-									delete_rain(node);
-									node = savenode;
-									if (node == NULL) break;
-								}
-							}
-						}
-					}
-				}
-				if (player_ship.shape == UMBRELLA_ROUND) {
-					float d0 = node->pos[0] - player_ship.pos[0];
-					float d1 = node->pos[1] - player_ship.pos[1];
-					float distance = sqrt((d0*d0)+(d1*d1));
-					if (distance <= player_ship.radius && node->pos[1] > player_ship.pos[1]) {
-						if (node->linewidth > 1) {
-							if (deflection) {
-								//deflect raindrop
-								double dot;
-								Vec v, up = {0,1,0};
-								VecSub(node->pos, player_ship.pos, v);
-								VecNormalize(v);
-								node->pos[0] = player_ship.pos[0] + v[0] * player_ship.radius;
-								node->pos[1] = player_ship.pos[1] + v[1] * player_ship.radius;
-								dot = VecDot(v,up);
-								dot += 1.0;
-								node->vel[0] += v[0] * dot * 10.0;
-								node->vel[1] += v[1] * dot * 10.0;
-							} else {
-								savenode = node->next;
-								delete_rain(node);
-								node = savenode;
-								if (node == NULL) break;
-							}
-						}
+				float d0 = node->pos[0] - player_ship.pos[0];
+				float d1 = node->pos[1] - player_ship.pos[1];
+				float distance = sqrt((d0*d0)+(d1*d1));
+				if (distance <= player_ship.radius && node->pos[1] > player_ship.pos[1]) {
+					if (node->linewidth > 1) {
+						savenode = node->next;
+						delete_rain(node);
+						node = savenode;
+						if (node == NULL) break;
 					}
 				}
 				//VecCopy(player_ship.pos, player_ship.lastpos);

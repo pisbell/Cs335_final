@@ -105,7 +105,7 @@ typedef struct t_laser {
 	struct t_laser *next;
 } Laser;
 
-typedef struct ships {
+typedef struct t_ship {
     int shiptype;
     int health;
     int shields;

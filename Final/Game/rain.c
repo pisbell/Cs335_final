@@ -10,7 +10,6 @@
 
 //These components can be turned on and off
 #define USE_FONTS
-#define USE_UMBRELLA
 #define USE_LOG
 
 
@@ -117,8 +116,7 @@ typedef struct ships {
     Vec pos;
     Vec lastpos;
 	float width;
-	float width2;
-	float radius;
+	float hitbox_radius;
 } Ship;
 
 
@@ -126,16 +124,13 @@ Laser *ihead=NULL;
 void delete_rain(Laser *node);
 void cleanup_raindrops(void);
 
-#ifdef USE_UMBRELLA
 Ship player_ship;
 GLuint umbrella_texture;
 GLuint background_texture;
 int show_umbrella  = 0;
 void draw_umbrella(void);
-#endif //USE_UMBRELLA
 
 int totrain=0;
-int maxrain=0;
 int show_rain      = 1;
 int show_text      = 0;
 
@@ -189,7 +184,6 @@ int main(int argc, char **argv)
 	glfwSetKeyCallback((GLFWkeyfun)NULL);
 	glfwSetMousePosCallback((GLFWmouseposfun)NULL);
 	close_log_file();
-	printf("totrain: %i  maxrain: %i\n",totrain,maxrain);
 	glfwTerminate();
 	#ifdef USE_FONTS
 	cleanup_fonts();
@@ -228,12 +222,10 @@ void checkkey(int k1, int k2)
 		show_text ^= 1;
 		return;
 	}
-	#ifdef USE_UMBRELLA
 	if (k1 == 'U') {
 		show_umbrella ^= 1;
 		return;
 	}
-	#endif //USE_UMBRELLA
 	if (k1 == '`') {
 		if (--time_control < 0)
 			time_control = 0;
@@ -244,7 +236,6 @@ void checkkey(int k1, int k2)
 			time_control = 32;
 		return;
 	}
-	#ifdef USE_UMBRELLA
 	if (show_umbrella) {
 		if (k1 == 'W') {
 			if (shift) {
@@ -254,9 +245,8 @@ void checkkey(int k1, int k2)
 				//enlarge the player_ship
 				player_ship.width *= 1.05;
 			}
-			//half the width
-			player_ship.width2 = player_ship.width * 0.5;
-			player_ship.radius = (float)player_ship.width2;
+			//hit box is circle inscribed in texture edges
+			player_ship.hitbox_radius = player_ship.width * 0.5;
 			return;
 		}
 		if (k1 == GLFW_KEY_LEFT)  {
@@ -276,19 +266,15 @@ void checkkey(int k1, int k2)
 			player_ship.pos[1] -= 10.0;
 		}
 	}
-	#endif //USE_UMBRELLA
 }
 
 void init(void)
 {
-	#ifdef USE_UMBRELLA
 	player_ship.pos[0] = 200.0;
 	player_ship.pos[1] = 400.0;
 	VecCopy(player_ship.pos, player_ship.lastpos);
 	player_ship.width = 300.0;
-	player_ship.width2 = player_ship.width * 0.5;
-	player_ship.radius = (float)player_ship.width2;
-	#endif //USE_UMBRELLA
+	player_ship.hitbox_radius = player_ship.width * 0.5;
 }
 
 int InitGL(GLvoid)
@@ -358,11 +344,8 @@ void render(GLvoid)
 		r.bot    = 120;
 		r.center = 0;
 		ggprint12(&r, 16, 0x00cc6622, "<R> Rain: %s",show_rain==1?"On":"Off");
-		//#ifdef USE_UMBRELLA
 		ggprint12(&r, 16, 0x00cc6622, "<U> Umbrella: %s",show_umbrella==1?"On":"Off");
-		//#endif //USE_UMBRELLA
 		ggprint12(&r, 16, 0x00aaaa00, "total drops: %i",totrain);
-		ggprint12(&r, 16, 0x00aaaa00, "max drops: %i\n",maxrain);
 	}
 }
 
@@ -375,7 +358,7 @@ void draw_umbrella(void)
 	glAlphaFunc(GL_GREATER, 0.0f);
 	glBindTexture(GL_TEXTURE_2D, umbrella_texture);
 	glBegin(GL_QUADS);
-		float w = player_ship.width2;
+		float w = player_ship.width * 0.5;
 		glTexCoord2f(0.0f, 0.0f); glVertex2f(-w, -w);
 		glTexCoord2f(1.0f, 0.0f); glVertex2f( w, -w);
 		glTexCoord2f(1.0f, 1.0f); glVertex2f( w,  w);
@@ -477,26 +460,25 @@ void physics(void)
 	
 	//check rain droplets
 	if (ihead) {
-		int r,n=0;
 		Laser *savenode;
 		Laser *node = ihead;
 		while(node) {
-			n++;
-			//#ifdef USE_UMBRELLA
+			//TODO: This only check against the player's ship. We actually need
+			//      to check the player's ship for every enemy laser and every
+			//      enemy ship for every player's laser.
 			if (show_umbrella) {
 				//collision detection for raindrop on player_ship
 				float d0 = node->pos[0] - player_ship.pos[0];
 				float d1 = node->pos[1] - player_ship.pos[1];
 				float distance = sqrt((d0*d0)+(d1*d1));
-				if (distance <= player_ship.radius && node->pos[1] > player_ship.pos[1]) {
-					if (node->linewidth > 1) {
-						savenode = node->next;
-						delete_rain(node);
-						node = savenode;
-						if (node == NULL) break;
-					}
+				if (distance <= player_ship.hitbox_radius) {
+					savenode = node->next;
+					delete_rain(node);
+					node = savenode;
+					//TODO: damage shields/health/explode here
+					if (node == NULL) break;
+					continue;
 				}
-				//VecCopy(player_ship.pos, player_ship.lastpos);
 			}
 		
 			if (node->pos[1] < -20.0f) {
@@ -505,12 +487,11 @@ void physics(void)
 				delete_rain(node);
 				node = savenode;
 				if (node == NULL) break;
+				continue;
 			}
 			if (node->next == NULL) break;
 			node = node->next;
 		}
-		if (maxrain < n)
-			maxrain = n;
 	}
 }
 

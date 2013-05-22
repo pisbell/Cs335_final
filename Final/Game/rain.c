@@ -8,26 +8,18 @@
 #include <math.h>
 #include <time.h>
 #include <glib.h>
+#include <GL/glfw.h>
+
+#include "constants.h"
 
 //These components can be turned on and off
 #define USE_FONTS
 #define USE_LOG
 
-// Designates teams for ships/weapons, to prevent friendly fire.
-#define TEAM_EMPIRE (-1)
-#define TEAM_REBELS 1
-
-// Bitmask values for arrow key inputs.
-#define INPUT_UP 0x1
-#define INPUT_DOWN 0x2
-#define INPUT_LEFT 0x4
-#define INPUT_RIGHT 0x8
-
 #ifdef USE_LOG
 #include "log.h"
 #endif //USE_LOG
 #include "defs.h"
-#include <GL/glfw.h>
 
 #ifdef USE_FONTS
 #include "fonts.h"
@@ -51,55 +43,7 @@ extern GLuint tex_readgl_bmp(char *fileName, int alpha_channel);
 
 //global variables and constants
 int time_control=1;
-int xres=800;
-int yres=600;
-int pad = 500; // For empty space on sides of screen
-int halfpad = 250;
 int input_directions=0; //bitmask of arrow keys currently down, see INPUT_* macros
-
-
-//ship global declarations 
-int tFighter      = 1;
-int tBomber       = 2;
-int tIntercepter  = 3;
-int tOpressor     = 4;
-int aWing         = 5;
-int xWing         = 6;
-int Diffculty     = 0;
-
-
-int statsHealth  [6][3] = { 
-    { 100, 200, 300},
-    {  50,  75, 150},
-    { 200, 300, 400},
-    { 300, 400, 500},
-    {1000, 800, 650},
-    { 800, 750, 600}
-};
-int statsShields [6][3] = {
-    { 100, 200, 300},
-    { 150, 225, 350},
-    {  50,  75, 150},
-    { 100, 200, 300},
-    {1000, 700, 500},
-    { 750, 500, 350}
-};
-int statsDamage  [6][3] = {
-    { 100, 175, 225},
-    { 150, 250, 300},
-    {   2,   6,   9},
-    { 400, 500, 600},
-    {  75,  75,  75},
-    { 100, 100, 100}
-};
-int statsShotfreq[6][3] = {
-    {  15,  25,  40},
-    {   5,  15,  25},
-    {  40,  70,  95},
-    {   5,  10,  15},
-    {   2,   2,   2},
-    {   5,   5,   5}
-};
 
 typedef struct t_laser {
 	int team;

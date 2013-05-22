@@ -74,7 +74,7 @@ typedef struct t_ship {
 
 
 GList *laser_list = NULL;
-
+GList *enemies_list = NULL;
 Ship *player_ship = NULL;
 GLuint ship_textures[SHIP_COUNT];
 GLuint background_texture;
@@ -100,6 +100,16 @@ int main(int argc, char **argv)
 	srand((unsigned int)time(NULL));
 	//
 	player_ship = ship_create(SHIP_XWING, TEAM_REBELS, xres/2, 100.0); //TODO: Let player select ship (other than debug toggles)
+
+	Ship *enemytmp = NULL;
+	enemytmp = ship_create(SHIP_FIGHTER, TEAM_EMPIRE, xres/4, 5*yres/6);
+	enemies_list = g_list_prepend(enemies_list, enemytmp);
+	enemytmp = ship_create(SHIP_BOMBER, TEAM_EMPIRE, 2*xres/4, 3*yres/6);
+	enemies_list = g_list_prepend(enemies_list, enemytmp);
+	enemytmp = ship_create(SHIP_OPRESSOR, TEAM_EMPIRE, 3*xres/4, 5*yres/6);
+	enemies_list = g_list_prepend(enemies_list, enemytmp);
+
+
 	glfwInit();
 	srand(time(NULL));
 	nmodes = glfwGetVideoModes(glist, 100);
@@ -144,6 +154,9 @@ int main(int argc, char **argv)
 	cleanup_fonts();
 	#endif //USE_FONTS
 
+	free(player_ship);
+	g_list_foreach(enemies_list, (GFunc)free, NULL);
+	g_list_free(enemies_list);
 	g_list_foreach(laser_list, (GFunc)free, NULL);
 	g_list_free(laser_list);
 	return 0;
@@ -296,8 +309,8 @@ void render(GLvoid)
 	}
 	glDisable(GL_BLEND);
 
-	if(player_ship->is_visible)
-		ship_render(player_ship);
+	ship_render(player_ship);
+	g_list_foreach(enemies_list, (GFunc)ship_render, NULL);
 
 	if (show_text) {
 		//draw some text
@@ -323,6 +336,9 @@ void render(GLvoid)
 
 void ship_render(Ship *ship)
 {
+	if(!ship->is_visible)
+		return;
+
 	glColor4f(1.0f, 1.0f, 1.0f, 0.8f);
 	glPushMatrix();
 	glTranslatef(ship->pos[0], ship->pos[1], ship->pos[2]);
@@ -359,32 +375,38 @@ void laser_move_frame(Laser *node) {
 	node->pos[1] += node->vel[1] * timeslice;
 }
 
-void laser_check_collision(Laser *node) {
-	//TODO: This only check against the player's ship. We actually need
-	//      to check the player's ship for every enemy laser and every
-	//      enemy ship for every player's laser.
-
-	if(node->team == TEAM_REBELS) {
-		//TODO: iterate over enemy ships, check hitboxes
-	} else if(node->team == TEAM_EMPIRE) {
-		if(player_ship->is_vulnerable) {
-			//collision detection for raindrop on player_ship
-			float d0 = node->pos[0] - player_ship->pos[0];
-			float d1 = node->pos[1] - player_ship->pos[1];
-			float distance = sqrt((d0*d0)+(d1*d1));
-			if (distance <= player_ship->hitbox_radius) {
-				//TODO: damage shields/health/explode here
-				laser_list = g_list_remove(laser_list, node);
-				free(node);
-				return;
-			}
+void ship_laser_check_collision(Ship *ship, Laser *laser) {
+	// Checks laser and ship pair for collision.
+	if(ship->is_vulnerable && laser->team != ship->team) {
+		//collision detection for laser on ship
+		float d0 = laser->pos[0] - ship->pos[0];
+		float d1 = laser->pos[1] - ship->pos[1];
+		float distance = sqrt((d0*d0)+(d1*d1));
+		if (distance <= ship->hitbox_radius) {
+			//TODO: damage shields/health/explode here
+			laser_list = g_list_remove(laser_list, laser);
+			free(laser);
+			return;
 		}
 	}
+}
 
-	if (node->pos[1] <= -1.0f * node->length || node->pos[1] >= yres + node->length) {
+void laser_check_collision(Laser *laser) {
+	// Checks given laser for collisions with all applicable ships.
+
+	if (laser->pos[1] <= -1.0f * laser->length || laser->pos[1] >= yres + laser->length) {
 		// Laser is above or below screen, remove it.
-		laser_list = g_list_remove(laser_list, node);
-		free(node);
+		laser_list = g_list_remove(laser_list, laser);
+		free(laser);
+	}
+
+	if(laser->team == TEAM_REBELS) {
+		// Check every enemy ship against our laser.
+		g_list_foreach(enemies_list, (GFunc)ship_laser_check_collision, laser);
+	} else if(laser->team == TEAM_EMPIRE) {
+		// Check our single ship against enemy laser.
+		// (If we made another list for rebel ships, we could possibly do multiplayer.)
+		ship_laser_check_collision(player_ship, laser);
 	}
 }
 
@@ -483,10 +505,7 @@ void physics(void)
 		if(input_directions & INPUT_DOWN)  player_ship->pos[1] -= 10.0;
 	}
 
-	//move rain droplets
-	g_list_foreach(laser_list, (GFunc)laser_move_frame, NULL);
-	
-	//check rain droplets
-	g_list_foreach(laser_list, (GFunc)laser_check_collision, NULL);
+	g_list_foreach(laser_list, (GFunc)laser_move_frame, NULL); // Update laser positions
+	g_list_foreach(laser_list, (GFunc)laser_check_collision, NULL); // Run collision detection
 }
 

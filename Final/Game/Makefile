@@ -3,15 +3,15 @@
 ###########################################
 CC     = gcc
 ##CFLAGS = -I../../include   -pthread -O2 -Wall
-CFLAGS = -I../include -pthread -O1
+CFLAGS = -I../include -pthread -O1 `pkg-config --cflags glib-2.0`
 
 LIB       = ../lib/x11/libglfw.a
-LFLAGS    = $(LIB) -lrt -lX11 -lGLU -lGL -pthread -lm -lXrandr
+LFLAGS    = $(LIB) -lrt -lX11 -lGLU -lGL -pthread -lm -lXrandr `pkg-config --libs glib-2.0`
 
 all: rain
 
 rain: rain.o log.o cfonts.o fonttex.o bmp.o
-	gcc $(CFLAGS) rain.o log.o cfonts.o fonttex.o bmp.o $(LFLAGS) -o rain
+	gcc -o rain $(CFLAGS) rain.o log.o cfonts.o fonttex.o bmp.o $(LFLAGS)
 
 rain.o: rain.c
 	gcc $(CFLAGS) -c rain.c

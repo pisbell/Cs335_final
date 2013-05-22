@@ -7,6 +7,7 @@
 #include <string.h>
 #include <math.h>
 #include <time.h>
+#include <glib.h>
 
 //These components can be turned on and off
 #define USE_FONTS
@@ -38,7 +39,6 @@ int InitGL(GLvoid);
 void checkkey(int k1, int k2);
 void physics(void);
 void render(void);
-void draw_raindrops(void);
 extern GLuint loadBMP(const char *imagepath);
 extern GLuint tex_readgl_bmp(char *fileName, int alpha_channel);
 
@@ -101,8 +101,6 @@ typedef struct t_laser {
 	Vec maxvel;
 	float length;
 	float color[4];
-	struct t_laser *prev;
-	struct t_laser *next;
 } Laser;
 
 typedef struct t_ship {
@@ -120,15 +118,17 @@ typedef struct t_ship {
 } Ship;
 
 
-Laser *ihead=NULL;
-void delete_rain(Laser *node);
-void cleanup_raindrops(void);
+GList *laser_list = NULL;
 
 Ship player_ship;
 GLuint umbrella_texture;
 GLuint background_texture;
 int show_umbrella  = 0;
 void draw_umbrella(void);
+
+void laser_move_frame(Laser *node);
+void laser_check_collision(Laser *node);
+void laser_render(Laser *node);
 
 int totrain=0;
 int show_rain      = 1;
@@ -189,7 +189,8 @@ int main(int argc, char **argv)
 	cleanup_fonts();
 	#endif //USE_FONTS
 
-	cleanup_raindrops();
+	g_list_foreach(laser_list, (GFunc)free, NULL);
+	g_list_free(laser_list);
 	return 0;
 }
 
@@ -330,8 +331,10 @@ void render(GLvoid)
 	glBindTexture(GL_TEXTURE_2D, 0);
 
 
-	if (show_rain)
-		draw_raindrops();
+	if (show_rain) {
+		g_list_foreach(laser_list, (GFunc)laser_render, NULL);
+		glLineWidth(1);
+	}
 	glDisable(GL_BLEND);
 
 	if (show_umbrella)
@@ -369,26 +372,52 @@ void draw_umbrella(void)
 	glPopMatrix();
 }
 
-void draw_raindrops(void)
-{
-	if (ihead) {
-		Laser *node = ihead;
-		while(node) {
-			glPushMatrix();
-			glTranslated(node->pos[0],node->pos[1],node->pos[2]);
-			glColor4fv(node->color);
-			glLineWidth(node->linewidth);
-			glBegin(GL_LINES);
-				glVertex2f(0.0f, 0.0f);
-				glVertex2f(0.0f, node->length);
-			glEnd();
-			glPopMatrix();
-			//
-			if (node->next==NULL) break;
-			node = node->next;
+void laser_render(Laser *node) {
+	glPushMatrix();
+	glTranslated(node->pos[0],node->pos[1],node->pos[2]);
+	glColor4fv(node->color);
+	glLineWidth(node->linewidth);
+	glBegin(GL_LINES);
+		glVertex2f(0.0f, 0.0f);
+		glVertex2f(0.0f, node->length);
+	glEnd();
+	glPopMatrix();
+}
+
+void laser_move_frame(Laser *node) {
+	node->vel[1] = -75.0;
+	VecCopy(node->pos, node->lastpos);
+	node->pos[0] += node->vel[0] * timeslice;
+	node->pos[1] += node->vel[1] * timeslice;
+	if (fabs(node->vel[1]) > node->maxvel[1])
+		node->vel[1] *= 0.96;
+	node->vel[0] *= 0.999;
+}
+
+void laser_check_collision(Laser *node) {
+//FIXME i don't think this is being deleted correctly, might need user data here or something.
+
+	//TODO: This only check against the player's ship. We actually need
+	//      to check the player's ship for every enemy laser and every
+	//      enemy ship for every player's laser.
+	if (show_umbrella) {
+		//collision detection for raindrop on player_ship
+		float d0 = node->pos[0] - player_ship.pos[0];
+		float d1 = node->pos[1] - player_ship.pos[1];
+		float distance = sqrt((d0*d0)+(d1*d1));
+		if (distance <= player_ship.hitbox_radius) {
+			//TODO: damage shields/health/explode here
+			laser_list = g_list_remove(laser_list, node);
+			free(node);
+			return;
 		}
 	}
-	glLineWidth(1);
+
+	if (node->pos[1] < -20.0f) {
+		//rain drop is below the visible area
+		laser_list = g_list_remove(laser_list, node);
+		free(node);
+	}
 }
 
 double VecNormalize(Vec vec) {
@@ -419,7 +448,6 @@ void physics(void)
 			Log("error allocating node.\n");
 			exit(EXIT_FAILURE);
 		}
-		node->prev = node->next = NULL;
 		node->pos[0] = (rnd() * (float)(xres-pad-600));
 		node->pos[0] += halfpad+100;
 		node->pos[1] = (float)yres - 100 - rnd()*50;//rnd() * 100.0f + (float)yres;
@@ -435,104 +463,15 @@ void physics(void)
 		node->maxvel[1] = (float)(node->linewidth*16);
 		node->length = 20;//node->maxvel[1] * 0.2f + rnd();
 		//put raindrop into linked list
-		node->next = ihead;
-		if (ihead) ihead->prev = node;
-		ihead = node;
+		laser_list = g_list_prepend(laser_list, node);
 		++totrain;
 	}
 
 	//move rain droplets
-	if (ihead) {
-		Laser *node = ihead;
-		while(node) {
-			node->vel[1] = -75.0;
-			VecCopy(node->pos, node->lastpos);
-			node->pos[0] += node->vel[0] * timeslice;
-			node->pos[1] += node->vel[1] * timeslice;
-			if (fabs(node->vel[1]) > node->maxvel[1])
-				node->vel[1] *= 0.96;
-			node->vel[0] *= 0.999;
-			//
-			if (node->next == NULL) break;
-			node = node->next;
-		}
-	}
+	g_list_foreach(laser_list, (GFunc)laser_move_frame, NULL);
 	
 	//check rain droplets
-	if (ihead) {
-		Laser *savenode;
-		Laser *node = ihead;
-		while(node) {
-			//TODO: This only check against the player's ship. We actually need
-			//      to check the player's ship for every enemy laser and every
-			//      enemy ship for every player's laser.
-			if (show_umbrella) {
-				//collision detection for raindrop on player_ship
-				float d0 = node->pos[0] - player_ship.pos[0];
-				float d1 = node->pos[1] - player_ship.pos[1];
-				float distance = sqrt((d0*d0)+(d1*d1));
-				if (distance <= player_ship.hitbox_radius) {
-					savenode = node->next;
-					delete_rain(node);
-					node = savenode;
-					//TODO: damage shields/health/explode here
-					if (node == NULL) break;
-					continue;
-				}
-			}
-		
-			if (node->pos[1] < -20.0f) {
-				//rain drop is below the visible area
-				savenode = node->next;
-				delete_rain(node);
-				node = savenode;
-				if (node == NULL) break;
-				continue;
-			}
-			if (node->next == NULL) break;
-			node = node->next;
-		}
-	}
-}
+	g_list_foreach(laser_list, (GFunc)laser_check_collision, NULL);
 
-void delete_rain(Laser *node)
-{
-	//remove a node from linked list
-	if (node->next == NULL && node->prev == NULL) {
-		//only one item in list
-		free(node);
-		ihead = NULL;
-		return;
-	}
-	if (node->next != NULL && node->prev == NULL) {
-		//at beginning of list
-		node->next->prev = NULL;
-		free(node);
-		return;
-	}
-	if (node->next == NULL && node->prev != NULL) {
-		//at end of list
-		node->prev->next = NULL;
-		free(node);
-		return;
-	}
-	if (node->next != NULL && node->prev != NULL) {
-		//in middle of list
-		node->prev->next = node->next;
-		node->next->prev = node->prev;
-		free(node);
-		return;
-	}
-	//to do: optimize the code above.
-}
-
-void cleanup_raindrops(void)
-{
-	Laser *s;
-	while(ihead) {
-		s = ihead->next;
-		free(ihead);
-		ihead = s;
-	}
 }
 

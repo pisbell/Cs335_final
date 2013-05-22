@@ -57,6 +57,23 @@ int statsShotfreq[SHIP_COUNT][DIFFICULTY_COUNT] = {
     {   5,   5,   5}
 };
 
+float statsEdgeLength[SHIP_COUNT] = {
+	75.0,
+	75.0,
+	75.0,
+	75.0,
+	75.0,
+	75.0
+};
+float statsHitboxRadius[SHIP_COUNT] = {
+	40.0,
+	40.0,
+	40.0,
+	40.0,
+	40.0,
+	40.0
+};
+
 // Screen settings
 int xres = 800;
 int yres = 600;

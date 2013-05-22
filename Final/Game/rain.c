@@ -39,8 +39,6 @@
 
 //constants
 const float timeslice = 1.0f/60.0f;
-const float gravity = -0.2f;
-#define ALPHA 1
 
 //prototypes
 void init(void);
@@ -121,7 +119,9 @@ typedef struct t_ship {
 	int shields;
 	int damage;
 	int shotfreq;
-	int vulnerable; // Is ship vulnerable to hostile fire?
+	int is_vulnerable; // Is ship vulnerable to hostile fire?
+	int is_visible; // Are we drawing the ship?
+	int can_attack; // Can the ship fire?
 	Vec vel;
 	Vec maxvel;
 	Vec pos;
@@ -136,15 +136,14 @@ GList *laser_list = NULL;
 Ship player_ship;
 GLuint umbrella_texture;
 GLuint background_texture;
-int show_umbrella  = 0;
-void draw_umbrella(void);
+void render_ship(Ship *ship);
 
 void laser_move_frame(Laser *node);
 void laser_check_collision(Laser *node);
 void laser_render(Laser *node);
 void laser_fire(Ship *ship);
 
-int show_rain      = 1;
+int show_lasers      = 1;
 int show_text      = 0;
 
 
@@ -188,14 +187,6 @@ int main(int argc, char **argv)
 	while(1) {
 		for (i=0; i<time_control; i++)
 			physics();
-
-		if(input_directions) {
-			VecCopy(player_ship.pos, player_ship.lastpos);
-			if(input_directions & INPUT_LEFT)  player_ship.pos[0] -= 10.0;
-			if(input_directions & INPUT_RIGHT) player_ship.pos[0] += 10.0;
-			if(input_directions & INPUT_UP)    player_ship.pos[1] += 10.0;
-			if(input_directions & INPUT_DOWN)  player_ship.pos[1] -= 10.0;
-		}
 
 		render();
 		glfwSwapBuffers();
@@ -247,7 +238,7 @@ void checkkey(int k1, int k2)
 
 
 	if (k1 == 'R') {
-		show_rain ^= 1;
+		show_lasers ^= 1;
 		return;
 	}
 	if (k1 == 'T') {
@@ -255,7 +246,15 @@ void checkkey(int k1, int k2)
 		return;
 	}
 	if (k1 == 'U') {
-		show_umbrella ^= 1;
+		player_ship.is_visible ^= 1;
+		return;
+	}
+	if (k1 == 'V') {
+		player_ship.is_vulnerable ^= 1;
+		return;
+	}
+	if (k1 == 'A') {
+		player_ship.can_attack ^= 1;
 		return;
 	}
 	if (k1 == '`') {
@@ -268,19 +267,19 @@ void checkkey(int k1, int k2)
 			time_control = 32;
 		return;
 	}
-	if (show_umbrella) {
-		if (k1 == 'W') {
-			if (shift) {
-				//shrink the player_ship
-				player_ship.edge_length *= (1.0 / 1.05);
-			} else {
-				//enlarge the player_ship
-				player_ship.edge_length *= 1.05;
-			}
-			//hit box is circle inscribed in texture edges
-			player_ship.hitbox_radius = player_ship.edge_length * 0.5;
-			return;
+	if (k1 == 'W') {
+		if (shift) {
+			//shrink the player_ship
+			player_ship.edge_length *= (1.0 / 1.05);
+		} else {
+			//enlarge the player_ship
+			player_ship.edge_length *= 1.05;
 		}
+		//hit box is circle inscribed in texture edges
+		player_ship.hitbox_radius = player_ship.edge_length * 0.5;
+		return;
+	}
+	if (player_ship.can_attack) {
 		if (k1 == ' ')  {
 			laser_fire(&player_ship);
 		}
@@ -295,7 +294,9 @@ void init(void)
 	player_ship.edge_length = 300.0;
 	player_ship.hitbox_radius = player_ship.edge_length * 0.5;
 	player_ship.team = TEAM_REBELS;
-	player_ship.vulnerable = 1;
+	player_ship.is_vulnerable = 1;
+	player_ship.is_visible = 1;
+	player_ship.can_attack = 1;
 }
 
 int InitGL(GLvoid)
@@ -307,7 +308,7 @@ int InitGL(GLvoid)
 	glClearColor(0.1f, 0.2f, 0.3f, 0.0f);
 	
 	background_texture = loadBMP("bg.bmp");
-    umbrella_texture = tex_readgl_bmp("XWing.bmp", ALPHA);
+    umbrella_texture = tex_readgl_bmp("XWing.bmp", 1.0);
 	return 1;
 }
 
@@ -351,14 +352,14 @@ void render(GLvoid)
 	glBindTexture(GL_TEXTURE_2D, 0);
 
 
-	if (show_rain) {
+	if (show_lasers) {
 		g_list_foreach(laser_list, (GFunc)laser_render, NULL);
 		glLineWidth(1);
 	}
 	glDisable(GL_BLEND);
 
-	if (show_umbrella)
-		draw_umbrella();
+	if(player_ship.is_visible)
+		render_ship(&player_ship);
 
 	if (show_text) {
 		//draw some text
@@ -366,22 +367,23 @@ void render(GLvoid)
 		r.left   = 10;
 		r.bot    = 120;
 		r.center = 0;
-		ggprint12(&r, 16, 0x00cc6622, "<R> Rain: %s",show_rain==1?"On":"Off");
-		ggprint12(&r, 16, 0x00cc6622, "<U> Umbrella: %s",show_umbrella==1?"On":"Off");
-		//ggprint12(&r, 16, 0x00aaaa00, "total drops: %i",totrain);
+		ggprint12(&r, 16, 0x00cc6622, "<R> Render lasers: %s",show_lasers==1?"On":"Off");
+		ggprint12(&r, 16, 0x00cc6622, "<U> Visible: %s",player_ship.is_visible==1?"On":"Off");
+		ggprint12(&r, 16, 0x00aaaa00, "<V> Vulnerable: %s:",player_ship.is_vulnerable==1?"On":"Off");
+		ggprint12(&r, 16, 0x00aaaa00, "<A> Attack: %s:",player_ship.can_attack==1?"On":"Off");
 	}
 }
 
-void draw_umbrella(void)
+void render_ship(Ship *ship)
 {
 	glColor4f(1.0f, 1.0f, 1.0f, 0.8f);
 	glPushMatrix();
-	glTranslatef(player_ship.pos[0],player_ship.pos[1],player_ship.pos[2]);
+	glTranslatef(ship->pos[0], ship->pos[1], ship->pos[2]);
 	glEnable(GL_ALPHA_TEST);
 	glAlphaFunc(GL_GREATER, 0.0f);
-	glBindTexture(GL_TEXTURE_2D, umbrella_texture);
+	glBindTexture(GL_TEXTURE_2D, umbrella_texture); //TODO: vary texture bmp/orientation based on ship->shiptype
 	glBegin(GL_QUADS);
-		float w = player_ship.edge_length * 0.5;
+		float w = ship->edge_length * 0.5;
 		glTexCoord2f(0.0f, 0.0f); glVertex2f(-w, -w);
 		glTexCoord2f(1.0f, 0.0f); glVertex2f( w, -w);
 		glTexCoord2f(1.0f, 1.0f); glVertex2f( w,  w);
@@ -418,7 +420,7 @@ void laser_check_collision(Laser *node) {
 	if(node->team == TEAM_REBELS) {
 		//TODO: iterate over enemy ships, check hitboxes
 	} else if(node->team == TEAM_EMPIRE) {
-		if(player_ship.vulnerable) {
+		if(player_ship.is_vulnerable) {
 			//collision detection for raindrop on player_ship
 			float d0 = node->pos[0] - player_ship.pos[0];
 			float d1 = node->pos[1] - player_ship.pos[1];
@@ -473,7 +475,7 @@ void laser_fire(Ship *ship) {
 
 	// Set laser velocity (assuming constant for now)
 	node->vel[0] = 0.0f;
-	node->vel[1] = node->team * 75.0f;
+	node->vel[1] = node->team * 500.0f;
 
 	// Set color info (rgba 0.0->1.0?)
 	node->color[0] = 1.0;
@@ -491,9 +493,13 @@ void laser_fire(Ship *ship) {
 
 void physics(void)
 {
-	//Log("physics()...\n");
-	if (random(100) < 10) {
-		//laser_fire(&player_ship);
+	// move player's ship based on most current input
+	if(input_directions) {
+		VecCopy(player_ship.pos, player_ship.lastpos);
+		if(input_directions & INPUT_LEFT)  player_ship.pos[0] -= 10.0;
+		if(input_directions & INPUT_RIGHT) player_ship.pos[0] += 10.0;
+		if(input_directions & INPUT_UP)    player_ship.pos[1] += 10.0;
+		if(input_directions & INPUT_DOWN)  player_ship.pos[1] -= 10.0;
 	}
 
 	//move rain droplets
@@ -501,6 +507,5 @@ void physics(void)
 	
 	//check rain droplets
 	g_list_foreach(laser_list, (GFunc)laser_check_collision, NULL);
-
 }
 

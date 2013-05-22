@@ -76,7 +76,7 @@ typedef struct t_ship {
 GList *laser_list = NULL;
 
 Ship *player_ship = NULL;
-GLuint umbrella_texture;
+GLuint ship_textures[SHIP_COUNT];
 GLuint background_texture;
 
 void ship_render(Ship *ship);
@@ -99,7 +99,7 @@ int main(int argc, char **argv)
 	open_log_file();
 	srand((unsigned int)time(NULL));
 	//
-	player_ship = ship_create(SHIP_XWING, TEAM_REBELS, xres/2, 100.0);
+	player_ship = ship_create(SHIP_XWING, TEAM_REBELS, xres/2, 100.0); //TODO: Let player select ship (other than debug toggles)
 	glfwInit();
 	srand(time(NULL));
 	nmodes = glfwGetVideoModes(glist, 100);
@@ -216,6 +216,19 @@ void checkkey(int k1, int k2)
 		player_ship->can_move ^= 1;
 		return;
 	}
+	if (k1 == '0') {
+		player_ship->shiptype += 1;
+		if(player_ship->shiptype == SHIP_COUNT)
+			player_ship->shiptype = 0;
+		return;
+	}
+	if (k1 == '-') {
+		if(player_ship->team == TEAM_REBELS)
+			player_ship->team = TEAM_EMPIRE;
+		else
+			player_ship->team = TEAM_REBELS;
+		return;
+	}
 }
 
 int InitGL(GLvoid)
@@ -227,7 +240,12 @@ int InitGL(GLvoid)
 	glClearColor(0.1f, 0.2f, 0.3f, 0.0f);
 	
 	background_texture = loadBMP("bg.bmp");
-    umbrella_texture = tex_readgl_bmp("XWing.bmp", 1.0);
+    ship_textures[SHIP_FIGHTER] = tex_readgl_bmp("Fighter.bmp", 1.0);
+    ship_textures[SHIP_BOMBER] = tex_readgl_bmp("Bomber.bmp", 1.0);
+    ship_textures[SHIP_INTERCEPTER] = tex_readgl_bmp("Interceptor.bmp", 1.0);
+    ship_textures[SHIP_OPRESSOR] = tex_readgl_bmp("Oppressor.bmp", 1.0);
+    ship_textures[SHIP_AWING] = tex_readgl_bmp("AWing.bmp", 1.0);
+    ship_textures[SHIP_XWING] = tex_readgl_bmp("XWing.bmp", 1.0);
 	return 1;
 }
 
@@ -297,6 +315,8 @@ void render(GLvoid)
 		ggprint16(&r, 16, 0x00aaaa00, "<7> Enable vulnerablility: %s",player_ship->is_vulnerable==1?"On":"Off");
 		ggprint16(&r, 16, 0x00aaaa00, "<8> Enable attack: %s",player_ship->can_attack==1?"On":"Off");
 		ggprint16(&r, 16, 0x00aaaa00, "<9> Enable movement: %s",player_ship->can_move==1?"On":"Off");
+		ggprint16(&r, 16, 0x00aaaa00, "<0> Cycle ships: %d",player_ship->shiptype);
+		ggprint16(&r, 16, 0x00aaaa00, "<-> Cycle teams: %s",player_ship->team==TEAM_REBELS?"Rebels":"Empire");
 	}
 }
 
@@ -307,7 +327,7 @@ void ship_render(Ship *ship)
 	glTranslatef(ship->pos[0], ship->pos[1], ship->pos[2]);
 	glEnable(GL_ALPHA_TEST);
 	glAlphaFunc(GL_GREATER, 0.0f);
-	glBindTexture(GL_TEXTURE_2D, umbrella_texture); //TODO: vary texture bmp/orientation based on ship->shiptype
+	glBindTexture(GL_TEXTURE_2D, ship_textures[ship->shiptype]);
 	glBegin(GL_QUADS);
 		float w = ship->edge_length * 0.5;
 		glTexCoord2f(0.0f, 0.0f); glVertex2f(-w, -w);

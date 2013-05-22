@@ -391,6 +391,13 @@ void ship_laser_check_collision(Ship *ship, Laser *laser) {
 	}
 }
 
+void ship_enemy_attack_logic(Ship *ship) {
+	if(!ship->can_attack)
+		return;
+	if(random(100) < ship->shotfreq)
+		laser_fire(ship);
+}
+
 void laser_check_collision(Laser *laser) {
 	// Checks given laser for collisions with all applicable ships.
 
@@ -505,6 +512,7 @@ void physics(void)
 		if(input_directions & INPUT_DOWN)  player_ship->pos[1] -= 10.0;
 	}
 
+	g_list_foreach(enemies_list, (GFunc)ship_enemy_attack_logic, NULL); // Enemy lasers/etc
 	g_list_foreach(laser_list, (GFunc)laser_move_frame, NULL); // Update laser positions
 	g_list_foreach(laser_list, (GFunc)laser_check_collision, NULL); // Run collision detection
 }

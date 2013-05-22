@@ -17,6 +17,12 @@
 #define TEAM_EMPIRE (-1)
 #define TEAM_REBELS 1
 
+// Bitmask values for arrow key inputs.
+#define INPUT_UP 0x1
+#define INPUT_DOWN 0x2
+#define INPUT_LEFT 0x4
+#define INPUT_RIGHT 0x8
+
 #ifdef USE_LOG
 #include "log.h"
 #endif //USE_LOG
@@ -51,6 +57,7 @@ int xres=800;
 int yres=600;
 int pad; // For empty space on sides of screen
 int halfpad;
+int input_directions=0; //bitmask of arrow keys currently down, see INPUT_* macros
 
 
 //ship global declarations 
@@ -135,6 +142,7 @@ void draw_umbrella(void);
 void laser_move_frame(Laser *node);
 void laser_check_collision(Laser *node);
 void laser_render(Laser *node);
+void laser_fire(Ship *ship);
 
 int show_rain      = 1;
 int show_text      = 0;
@@ -167,7 +175,6 @@ int main(int argc, char **argv)
 	init();
 	InitGL();
 	glfwSetKeyCallback((GLFWkeyfun)(checkkey));
-	glfwEnable( GLFW_KEY_REPEAT );
 	glfwDisable( GLFW_MOUSE_CURSOR );
 	
 	#ifdef USE_FONTS
@@ -181,6 +188,15 @@ int main(int argc, char **argv)
 	while(1) {
 		for (i=0; i<time_control; i++)
 			physics();
+
+		if(input_directions) {
+			VecCopy(player_ship.pos, player_ship.lastpos);
+			if(input_directions & INPUT_LEFT)  player_ship.pos[0] -= 10.0;
+			if(input_directions & INPUT_RIGHT) player_ship.pos[0] += 10.0;
+			if(input_directions & INPUT_UP)    player_ship.pos[1] += 10.0;
+			if(input_directions & INPUT_DOWN)  player_ship.pos[1] -= 10.0;
+		}
+
 		render();
 		glfwSwapBuffers();
 		if (glfwGetKey(GLFW_KEY_ESC)) break;
@@ -209,14 +225,24 @@ void checkkey(int k1, int k2)
 			shift=1;
 			return;
 		}
-	}
-	if (k2 == GLFW_RELEASE) {
+		// Set the flag for the given arrow key if pressed
+		else if(k1 == GLFW_KEY_UP) input_directions |= INPUT_UP;
+		else if(k1 == GLFW_KEY_DOWN) input_directions |= INPUT_DOWN;
+		else if(k1 == GLFW_KEY_LEFT) input_directions |= INPUT_LEFT;
+		else if(k1 == GLFW_KEY_RIGHT) input_directions |= INPUT_RIGHT;
+	} else if (k2 == GLFW_RELEASE) {
 		if (k1 == GLFW_KEY_LSHIFT || k1 == GLFW_KEY_RSHIFT) {
 			//the shift key was released
 			shift=0;
 		}
+		// Unset the flag for the given arrow key if released
+		else if(k1 == GLFW_KEY_UP)    input_directions &= ~INPUT_UP;
+		else if(k1 == GLFW_KEY_DOWN)  input_directions &= ~INPUT_DOWN;
+		else if(k1 == GLFW_KEY_LEFT)  input_directions &= ~INPUT_LEFT;
+		else if(k1 == GLFW_KEY_RIGHT) input_directions &= ~INPUT_RIGHT;
+
 		//don't process any other keys on a release
-		return;
+		else return;
 	}
 
 
@@ -254,22 +280,6 @@ void checkkey(int k1, int k2)
 			//hit box is circle inscribed in texture edges
 			player_ship.hitbox_radius = player_ship.edge_length * 0.5;
 			return;
-		}
-		if (k1 == GLFW_KEY_LEFT)  {
-			VecCopy(player_ship.pos, player_ship.lastpos);
-			player_ship.pos[0] -= 10.0;
-		}
-		if (k1 == GLFW_KEY_RIGHT)  {
-			VecCopy(player_ship.pos, player_ship.lastpos);
-			player_ship.pos[0] += 10.0;
-		}
-		if (k1 == GLFW_KEY_UP)  {
-			VecCopy(player_ship.pos, player_ship.lastpos);
-			player_ship.pos[1] += 10.0;
-		}
-		if (k1 == GLFW_KEY_DOWN)  {
-			VecCopy(player_ship.pos, player_ship.lastpos);
-			player_ship.pos[1] -= 10.0;
 		}
 		if (k1 == ' ')  {
 			laser_fire(&player_ship);

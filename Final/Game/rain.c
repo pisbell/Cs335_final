@@ -122,6 +122,7 @@ typedef struct t_ship {
 	int is_vulnerable; // Is ship vulnerable to hostile fire?
 	int is_visible; // Are we drawing the ship?
 	int can_attack; // Can the ship fire?
+	int can_move; // Can the ship move?
 	Vec vel;
 	Vec maxvel;
 	Vec pos;
@@ -144,7 +145,7 @@ void laser_render(Laser *node);
 void laser_fire(Ship *ship);
 
 int show_lasers      = 1;
-int show_text      = 0;
+int show_text      = 1;
 
 
 int main(int argc, char **argv)
@@ -206,55 +207,25 @@ int main(int argc, char **argv)
 
 void checkkey(int k1, int k2)
 {
-	static int shift=0;
 	if (k2 == GLFW_PRESS) {
-		//some key is being pressed now
-		if (k1 == GLFW_KEY_LSHIFT || k1 == GLFW_KEY_RSHIFT) {
-			//it is a shift key
-			shift=1;
-			return;
-		}
 		// Set the flag for the given arrow key if pressed
-		//else if(k1 == GLFW_KEY_UP) input_directions |= INPUT_UP;
-		//else if(k1 == GLFW_KEY_DOWN) input_directions |= INPUT_DOWN;
-		else if(k1 == GLFW_KEY_LEFT) input_directions |= INPUT_LEFT;
-		else if(k1 == GLFW_KEY_RIGHT) input_directions |= INPUT_RIGHT;
-	}else if (k2 == GLFW_RELEASE) {
-		if (k1 == GLFW_KEY_LSHIFT || k1 == GLFW_KEY_RSHIFT) {
-			//the shift key was released
-			shift=0;
-		}
+		if(k1 == GLFW_KEY_LEFT) input_directions |= INPUT_LEFT;
+		if(k1 == GLFW_KEY_RIGHT) input_directions |= INPUT_RIGHT;
+
+	} else if (k2 == GLFW_RELEASE) {
 		// Unset the flag for the given arrow key if released
-		//else if(k1 == GLFW_KEY_UP)    input_directions &= ~INPUT_UP;
-		//else if(k1 == GLFW_KEY_DOWN)  input_directions &= ~INPUT_DOWN;
-		else if(k1 == GLFW_KEY_LEFT) input_directions &= ~INPUT_LEFT;
-		else if(k1 == GLFW_KEY_RIGHT) input_directions &= ~INPUT_RIGHT;
+		if(k1 == GLFW_KEY_LEFT) input_directions &= ~INPUT_LEFT;
+		if(k1 == GLFW_KEY_RIGHT) input_directions &= ~INPUT_RIGHT;
 
 		//don't process any other keys on a release
-		else return;
+		return;
 	}
 
+	if (k1 == ' ' && player_ship.can_attack) {
+		laser_fire(&player_ship);
+		return;
+	}
 
-	if (k1 == 'R') {
-		show_lasers ^= 1;
-		return;
-	}
-	if (k1 == 'T') {
-		show_text ^= 1;
-		return;
-	}
-	if (k1 == 'U') {
-		player_ship.is_visible ^= 1;
-		return;
-	}
-	if (k1 == 'V') {
-		player_ship.is_vulnerable ^= 1;
-		return;
-	}
-	if (k1 == 'A') {
-		player_ship.can_attack ^= 1;
-		return;
-	}
 	if (k1 == '`') {
 		if (--time_control < 0)
 			time_control = 0;
@@ -265,22 +236,41 @@ void checkkey(int k1, int k2)
 			time_control = 32;
 		return;
 	}
-	if (k1 == 'W') {
-		if (shift) {
-			//shrink the player_ship
-			player_ship.edge_length *= (1.0 / 1.05);
-		} else {
-			//enlarge the player_ship
-			player_ship.edge_length *= 1.05;
-		}
-		//hit box is circle inscribed in texture edges
+	if (k1 == '2') {
+		//shrink the player_ship
+		player_ship.edge_length *= (1.0 / 1.05);
 		player_ship.hitbox_radius = player_ship.edge_length * 0.5;
 		return;
 	}
-	if (player_ship.can_attack) {
-		if (k1 == ' ')  {
-			laser_fire(&player_ship);
-		}
+	if (k1 == '3') {
+		//enlarge the player_ship
+		player_ship.edge_length *= 1.05;
+		player_ship.hitbox_radius = player_ship.edge_length * 0.5;
+		return;
+	}
+	if (k1 == '4') {
+		show_lasers ^= 1;
+		return;
+	}
+	if (k1 == '5') {
+		show_text ^= 1;
+		return;
+	}
+	if (k1 == '6') {
+		player_ship.is_visible ^= 1;
+		return;
+	}
+	if (k1 == '7') {
+		player_ship.is_vulnerable ^= 1;
+		return;
+	}
+	if (k1 == '8') {
+		player_ship.can_attack ^= 1;
+		return;
+	}
+	if (k1 == '9') {
+		player_ship.can_move ^= 1;
+		return;
 	}
 }
 
@@ -295,6 +285,7 @@ void init(void)
 	player_ship.is_vulnerable = 1;
 	player_ship.is_visible = 1;
 	player_ship.can_attack = 1;
+	player_ship.can_move = 1;
 }
 
 int InitGL(GLvoid)
@@ -363,12 +354,19 @@ void render(GLvoid)
 		//draw some text
 		Rect r;
 		r.left   = 10;
-		r.bot    = 120;
+		r.bot    = 200;
 		r.center = 0;
-		ggprint12(&r, 16, 0x00cc6622, "<R> Render lasers: %s",show_lasers==1?"On":"Off");
-		ggprint12(&r, 16, 0x00cc6622, "<U> Visible: %s",player_ship.is_visible==1?"On":"Off");
-		ggprint12(&r, 16, 0x00aaaa00, "<V> Vulnerable: %s:",player_ship.is_vulnerable==1?"On":"Off");
-		ggprint12(&r, 16, 0x00aaaa00, "<A> Attack: %s:",player_ship.can_attack==1?"On":"Off");
+		ggprint16(&r, 16, 0x00cc6622, "< > Fire laser", NULL);
+		ggprint16(&r, 16, 0x00aa00aa, "<`> Slow game", NULL);
+		ggprint16(&r, 16, 0x00aa00aa, "<1> Speedup game", NULL);
+		ggprint16(&r, 16, 0x0000aaaa, "<2> Shrink ship", NULL);
+		ggprint16(&r, 16, 0x0000aaaa, "<3> Grow ship", NULL);
+		ggprint16(&r, 16, 0x00aaaa00, "<4> Render lasers: %s",show_lasers==1?"On":"Off");
+		ggprint16(&r, 16, 0x00aaaa00, "<5> Render text: %s",show_text==1?"On":"Off");
+		ggprint16(&r, 16, 0x00aaaa00, "<6> Render ship: %s",player_ship.is_visible==1?"On":"Off");
+		ggprint16(&r, 16, 0x00aaaa00, "<7> Enable vulnerablility: %s",player_ship.is_vulnerable==1?"On":"Off");
+		ggprint16(&r, 16, 0x00aaaa00, "<8> Enable attack: %s",player_ship.can_attack==1?"On":"Off");
+		ggprint16(&r, 16, 0x00aaaa00, "<9> Enable movement: %s",player_ship.can_move==1?"On":"Off");
 	}
 }
 
@@ -492,7 +490,7 @@ void laser_fire(Ship *ship) {
 void physics(void)
 {
 	// move player's ship based on most current input
-	if(input_directions) {
+	if(input_directions && player_ship.can_move) {
 		VecCopy(player_ship.pos, player_ship.lastpos);
 		if(input_directions & INPUT_LEFT)
 		    if (player_ship.pos[0] > halfpad+ (player_ship.edge_length/2))

@@ -271,6 +271,9 @@ void checkkey(int k1, int k2)
 			VecCopy(player_ship.pos, player_ship.lastpos);
 			player_ship.pos[1] -= 10.0;
 		}
+		if (k1 == ' ')  {
+			laser_fire(&player_ship);
+		}
 	}
 }
 
@@ -480,7 +483,7 @@ void physics(void)
 {
 	//Log("physics()...\n");
 	if (random(100) < 10) {
-		laser_fire(&player_ship);
+		//laser_fire(&player_ship);
 	}
 
 	//move rain droplets

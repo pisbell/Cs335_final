@@ -53,8 +53,8 @@ extern GLuint tex_readgl_bmp(char *fileName, int alpha_channel);
 int time_control=1;
 int xres=800;
 int yres=600;
-int pad; // For empty space on sides of screen
-int halfpad;
+int pad = 500; // For empty space on sides of screen
+int halfpad = 250;
 int input_directions=0; //bitmask of arrow keys currently down, see INPUT_* macros
 
 
@@ -149,8 +149,6 @@ int show_text      = 0;
 
 int main(int argc, char **argv)
 {
-	pad = 500;
-	halfpad = pad/2;
 	int i, nmodes;
 	GLFWvidmode glist[256];
 	open_log_file();
@@ -217,19 +215,19 @@ void checkkey(int k1, int k2)
 			return;
 		}
 		// Set the flag for the given arrow key if pressed
-		else if(k1 == GLFW_KEY_UP) input_directions |= INPUT_UP;
-		else if(k1 == GLFW_KEY_DOWN) input_directions |= INPUT_DOWN;
+		//else if(k1 == GLFW_KEY_UP) input_directions |= INPUT_UP;
+		//else if(k1 == GLFW_KEY_DOWN) input_directions |= INPUT_DOWN;
 		else if(k1 == GLFW_KEY_LEFT) input_directions |= INPUT_LEFT;
 		else if(k1 == GLFW_KEY_RIGHT) input_directions |= INPUT_RIGHT;
-	} else if (k2 == GLFW_RELEASE) {
+	}else if (k2 == GLFW_RELEASE) {
 		if (k1 == GLFW_KEY_LSHIFT || k1 == GLFW_KEY_RSHIFT) {
 			//the shift key was released
 			shift=0;
 		}
 		// Unset the flag for the given arrow key if released
-		else if(k1 == GLFW_KEY_UP)    input_directions &= ~INPUT_UP;
-		else if(k1 == GLFW_KEY_DOWN)  input_directions &= ~INPUT_DOWN;
-		else if(k1 == GLFW_KEY_LEFT)  input_directions &= ~INPUT_LEFT;
+		//else if(k1 == GLFW_KEY_UP)    input_directions &= ~INPUT_UP;
+		//else if(k1 == GLFW_KEY_DOWN)  input_directions &= ~INPUT_DOWN;
+		else if(k1 == GLFW_KEY_LEFT) input_directions &= ~INPUT_LEFT;
 		else if(k1 == GLFW_KEY_RIGHT) input_directions &= ~INPUT_RIGHT;
 
 		//don't process any other keys on a release
@@ -288,11 +286,11 @@ void checkkey(int k1, int k2)
 
 void init(void)
 {
-	player_ship.pos[0] = 200.0;
-	player_ship.pos[1] = 400.0;
+	player_ship.pos[0] = xres/2;
+	player_ship.pos[1] = 100.0;
 	VecCopy(player_ship.pos, player_ship.lastpos);
-	player_ship.edge_length = 300.0;
-	player_ship.hitbox_radius = player_ship.edge_length * 0.5;
+	player_ship.edge_length = 75.0;
+	player_ship.hitbox_radius = player_ship.edge_length * .75;
 	player_ship.team = TEAM_REBELS;
 	player_ship.is_vulnerable = 1;
 	player_ship.is_visible = 1;
@@ -496,8 +494,12 @@ void physics(void)
 	// move player's ship based on most current input
 	if(input_directions) {
 		VecCopy(player_ship.pos, player_ship.lastpos);
-		if(input_directions & INPUT_LEFT)  player_ship.pos[0] -= 10.0;
-		if(input_directions & INPUT_RIGHT) player_ship.pos[0] += 10.0;
+		if(input_directions & INPUT_LEFT)
+		    if (player_ship.pos[0] > halfpad+ (player_ship.edge_length/2))
+		    player_ship.pos[0] -= 10.0;
+		if(input_directions & INPUT_RIGHT)
+		   if (player_ship.pos[0] < xres-halfpad-(player_ship.edge_length/2))
+		    player_ship.pos[0] += 10.0;
 		if(input_directions & INPUT_UP)    player_ship.pos[1] += 10.0;
 		if(input_directions & INPUT_DOWN)  player_ship.pos[1] -= 10.0;
 	}

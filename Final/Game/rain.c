@@ -484,13 +484,13 @@ void laser_fire(Ship *ship) {
 	node->vel[0] = 0.0f;
 	node->vel[1] = node->team * 500.0f;
 
-	// Set color info (rgba 0.0->1.0?)
-	node->color[0] = 1.0;
-	node->color[1] = rnd() * 0.2f + 0.3f;
-	node->color[2] = rnd() * 0.2f + 0.3f;
+	// Set color info (rgba 0.0->1.0)
+	node->color[0] = node->team == TEAM_EMPIRE ? 1.0 : 0.0;
+	node->color[1] = node->team == TEAM_EMPIRE ? 0.0 : 1.0;
+	node->color[2] = 0.0;
 	node->color[3] = 1.0;
 
-	node->linewidth = random(3)+2;
+	node->linewidth = 3;
 	node->length = 20;
 
 	// Add to global list of active lasers

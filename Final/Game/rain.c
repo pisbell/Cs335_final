@@ -13,6 +13,9 @@
 #define USE_FONTS
 #define USE_LOG
 
+// Designates teams for ships/weapons, to prevent friendly fire.
+#define TEAM_EMPIRE (-1)
+#define TEAM_REBELS 1
 
 #ifdef USE_LOG
 #include "log.h"
@@ -94,6 +97,7 @@ int statsShotfreq[6][3] = {
 };
 
 typedef struct t_laser {
+	int team;
 	int linewidth;
 	Vec pos;
 	Vec lastpos;
@@ -104,17 +108,19 @@ typedef struct t_laser {
 } Laser;
 
 typedef struct t_ship {
-    int shiptype;
-    int health;
-    int shields;
-    int damage;
-    int shotfreq;
-    Vec vel;
-    Vec maxvel;
-    Vec pos;
-    Vec lastpos;
-	float width;
-	float hitbox_radius;
+	int team; // TEAM_REBELS or TEAM_EMPIRE
+	int shiptype;
+	int health;
+	int shields;
+	int damage;
+	int shotfreq;
+	int vulnerable; // Is ship vulnerable to hostile fire?
+	Vec vel;
+	Vec maxvel;
+	Vec pos;
+	Vec lastpos;
+	float edge_length; // Edge size of square texture
+	float hitbox_radius; // Radius of circular hitbox
 } Ship;
 
 
@@ -130,7 +136,6 @@ void laser_move_frame(Laser *node);
 void laser_check_collision(Laser *node);
 void laser_render(Laser *node);
 
-int totrain=0;
 int show_rain      = 1;
 int show_text      = 0;
 
@@ -241,13 +246,13 @@ void checkkey(int k1, int k2)
 		if (k1 == 'W') {
 			if (shift) {
 				//shrink the player_ship
-				player_ship.width *= (1.0 / 1.05);
+				player_ship.edge_length *= (1.0 / 1.05);
 			} else {
 				//enlarge the player_ship
-				player_ship.width *= 1.05;
+				player_ship.edge_length *= 1.05;
 			}
 			//hit box is circle inscribed in texture edges
-			player_ship.hitbox_radius = player_ship.width * 0.5;
+			player_ship.hitbox_radius = player_ship.edge_length * 0.5;
 			return;
 		}
 		if (k1 == GLFW_KEY_LEFT)  {
@@ -274,8 +279,10 @@ void init(void)
 	player_ship.pos[0] = 200.0;
 	player_ship.pos[1] = 400.0;
 	VecCopy(player_ship.pos, player_ship.lastpos);
-	player_ship.width = 300.0;
-	player_ship.hitbox_radius = player_ship.width * 0.5;
+	player_ship.edge_length = 300.0;
+	player_ship.hitbox_radius = player_ship.edge_length * 0.5;
+	player_ship.team = TEAM_REBELS;
+	player_ship.vulnerable = 1;
 }
 
 int InitGL(GLvoid)
@@ -348,7 +355,7 @@ void render(GLvoid)
 		r.center = 0;
 		ggprint12(&r, 16, 0x00cc6622, "<R> Rain: %s",show_rain==1?"On":"Off");
 		ggprint12(&r, 16, 0x00cc6622, "<U> Umbrella: %s",show_umbrella==1?"On":"Off");
-		ggprint12(&r, 16, 0x00aaaa00, "total drops: %i",totrain);
+		//ggprint12(&r, 16, 0x00aaaa00, "total drops: %i",totrain);
 	}
 }
 
@@ -361,7 +368,7 @@ void draw_umbrella(void)
 	glAlphaFunc(GL_GREATER, 0.0f);
 	glBindTexture(GL_TEXTURE_2D, umbrella_texture);
 	glBegin(GL_QUADS);
-		float w = player_ship.width * 0.5;
+		float w = player_ship.edge_length * 0.5;
 		glTexCoord2f(0.0f, 0.0f); glVertex2f(-w, -w);
 		glTexCoord2f(1.0f, 0.0f); glVertex2f( w, -w);
 		glTexCoord2f(1.0f, 1.0f); glVertex2f( w,  w);
@@ -385,36 +392,35 @@ void laser_render(Laser *node) {
 }
 
 void laser_move_frame(Laser *node) {
-	node->vel[1] = -75.0;
 	VecCopy(node->pos, node->lastpos);
 	node->pos[0] += node->vel[0] * timeslice;
 	node->pos[1] += node->vel[1] * timeslice;
-	if (fabs(node->vel[1]) > node->maxvel[1])
-		node->vel[1] *= 0.96;
-	node->vel[0] *= 0.999;
 }
 
 void laser_check_collision(Laser *node) {
-//FIXME i don't think this is being deleted correctly, might need user data here or something.
-
 	//TODO: This only check against the player's ship. We actually need
 	//      to check the player's ship for every enemy laser and every
 	//      enemy ship for every player's laser.
-	if (show_umbrella) {
-		//collision detection for raindrop on player_ship
-		float d0 = node->pos[0] - player_ship.pos[0];
-		float d1 = node->pos[1] - player_ship.pos[1];
-		float distance = sqrt((d0*d0)+(d1*d1));
-		if (distance <= player_ship.hitbox_radius) {
-			//TODO: damage shields/health/explode here
-			laser_list = g_list_remove(laser_list, node);
-			free(node);
-			return;
+
+	if(node->team == TEAM_REBELS) {
+		//TODO: iterate over enemy ships, check hitboxes
+	} else if(node->team == TEAM_EMPIRE) {
+		if(player_ship.vulnerable) {
+			//collision detection for raindrop on player_ship
+			float d0 = node->pos[0] - player_ship.pos[0];
+			float d1 = node->pos[1] - player_ship.pos[1];
+			float distance = sqrt((d0*d0)+(d1*d1));
+			if (distance <= player_ship.hitbox_radius) {
+				//TODO: damage shields/health/explode here
+				laser_list = g_list_remove(laser_list, node);
+				free(node);
+				return;
+			}
 		}
 	}
 
-	if (node->pos[1] < -20.0f) {
-		//rain drop is below the visible area
+	if (node->pos[1] <= -1.0f * node->length || node->pos[1] >= yres + node->length) {
+		// Laser is above or below screen, remove it.
 		laser_list = g_list_remove(laser_list, node);
 		free(node);
 	}
@@ -438,33 +444,43 @@ double VecNormalize(Vec vec) {
 	return(len);
 }
 
+void laser_fire(Ship *ship) {
+	// Creates and fires laser from the given ship
+
+	Laser *node = (Laser *)malloc(sizeof(Laser));
+	if (node == NULL) {
+		Log("error allocating node.\n");
+		exit(EXIT_FAILURE);
+	}
+	node->team = ship->team;
+
+	node->pos[0] = ship->pos[0];
+	node->pos[1] = ship->pos[1] + (0.5 * ship->edge_length * ship->team);
+	VecCopy(node->pos, node->lastpos);
+
+	// Set laser velocity (assuming constant for now)
+	node->vel[0] = 0.0f;
+	node->vel[1] = node->team * 75.0f;
+
+	// Set color info (rgba 0.0->1.0?)
+	node->color[0] = 1.0;
+	node->color[1] = rnd() * 0.2f + 0.3f;
+	node->color[2] = rnd() * 0.2f + 0.3f;
+	node->color[3] = 1.0;
+
+	node->linewidth = random(3)+2;
+	node->maxvel[1] = (float)(node->linewidth*16);
+	node->length = 20;
+
+	// Add to global list of active lasers
+	laser_list = g_list_prepend(laser_list, node);
+}
+
 void physics(void)
 {
 	//Log("physics()...\n");
 	if (random(100) < 10) {
-		//create new rain drops...
-		Laser *node = (Laser *)malloc(sizeof(Laser));
-		if (node == NULL) {
-			Log("error allocating node.\n");
-			exit(EXIT_FAILURE);
-		}
-		node->pos[0] = (rnd() * (float)(xres-pad-600));
-		node->pos[0] += halfpad+100;
-		node->pos[1] = (float)yres - 100 - rnd()*50;//rnd() * 100.0f + (float)yres;
-		VecCopy(node->pos, node->lastpos);
-		node->vel[0] = 
-		node->vel[1] = 0.0f;
-		node->color[0] = 1.0;//rnd() * 0.2f + 0.8f;
-		node->color[1] = rnd() * 0.2f + 0.3f;
-		node->color[2] = rnd() * 0.2f + 0.3f;
-		node->color[3] = 1.0;//rnd() * 0.5f + 0.3f; //alpha
-		node->linewidth = random(3)+2;
-		//larger linewidth = faster speed
-		node->maxvel[1] = (float)(node->linewidth*16);
-		node->length = 20;//node->maxvel[1] * 0.2f + rnd();
-		//put raindrop into linked list
-		laser_list = g_list_prepend(laser_list, node);
-		++totrain;
+		laser_fire(&player_ship);
 	}
 
 	//move rain droplets

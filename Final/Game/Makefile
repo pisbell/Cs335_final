@@ -10,7 +10,7 @@ LFLAGS    = $(LIB) -lrt -lX11 -lGLU -lGL -pthread -lm -lXrandr `pkg-config --lib
 
 all: rain
 
-rain: rain.o log.o cfonts.o fonttex.o bmp.o
+rain: rain.o log.o cfonts.o fonttex.o bmp.o constants.h
 	gcc -o rain $(CFLAGS) rain.o log.o cfonts.o fonttex.o bmp.o $(LFLAGS)
 
 rain.o: rain.c

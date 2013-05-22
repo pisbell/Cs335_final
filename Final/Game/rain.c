@@ -217,9 +217,10 @@ void checkkey(int k1, int k2)
 		return;
 	}
 	if (k1 == '0') {
-		player_ship->shiptype += 1;
-		if(player_ship->shiptype == SHIP_COUNT)
-			player_ship->shiptype = 0;
+		int newtype = player_ship->shiptype += 1;
+		if(newtype == SHIP_COUNT)
+			newtype = 0;
+		player_ship = ship_create(newtype, player_ship->team, player_ship->pos[0], player_ship->pos[1]);
 		return;
 	}
 	if (k1 == '-') {

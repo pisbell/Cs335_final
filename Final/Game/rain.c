@@ -48,7 +48,6 @@ typedef struct t_laser {
 	int team;
 	int linewidth;
 	Vec pos;
-	Vec lastpos;
 	Vec vel;
 	float length;
 	float color[4];
@@ -65,9 +64,9 @@ typedef struct t_ship {
 	int is_visible; // Are we drawing the ship?
 	int can_attack; // Can the ship fire?
 	int can_move; // Can the ship move?
-	Vec vel;
-	Vec pos;
-	Vec lastpos;
+	Vec pos; // Current position
+	Vec dest; // Where the ship "wants" to go
+	float speed; // Speed ship will move at (not current speed, and there is no acceleration)
 	float edge_length; // Edge size of square texture
 	float hitbox_radius; // Radius of circular hitbox
 } Ship;
@@ -370,9 +369,24 @@ void laser_render(Laser *node) {
 }
 
 void laser_move_frame(Laser *node) {
-	VecCopy(node->pos, node->lastpos);
 	node->pos[0] += node->vel[0] * timeslice;
 	node->pos[1] += node->vel[1] * timeslice;
+}
+
+void ship_move_frame(Ship *ship) {
+	if(!ship->can_move || ship->speed < 1)
+		return;
+
+	float xdist = ship->dest[0] - ship->pos[0];
+	float ydist = ship->dest[1] - ship->pos[1];
+	float xdist_squared = xdist*xdist;
+	float ydist_squared = ydist*ydist;
+	if(xdist_squared < 1 && ydist_squared < 1)
+		return; // So close it's not worth doing
+
+	float scale = sqrtf((ship->speed * ship->speed)/(xdist_squared + ydist_squared));
+	ship->pos[0] += xdist*scale;
+	ship->pos[1] += ydist*scale;
 }
 
 void ship_laser_check_collision(Ship *ship, Laser *laser) {
@@ -430,17 +444,15 @@ Ship* ship_create(int shiptype, int team, int xpos, int ypos) {
 	ship->shields = statsShields[shiptype][difficulty];
 	ship->damage = statsDamage[shiptype][difficulty];
 	ship->shotfreq = statsShotfreq[shiptype][difficulty];
+	ship->speed = statsSpeed[shiptype][difficulty];
 
 	ship->is_vulnerable = 1;
 	ship->is_visible = 1;
 	ship->can_attack = 1;
 	ship->can_move = 1;
 
-	ship->vel[0] = 0;
-	ship->vel[1] = 0;
-	ship->pos[0] = xpos;
-	ship->pos[1] = ypos;
-	VecCopy(ship->pos, ship->lastpos);
+	ship->pos[0] = ship->dest[0] = xpos;
+	ship->pos[1] = ship->dest[1] = ypos;
 
 	ship->edge_length = statsEdgeLength[shiptype];
 	ship->hitbox_radius = statsHitboxRadius[shiptype];
@@ -478,7 +490,6 @@ void laser_fire(Ship *ship) {
 
 	node->pos[0] = ship->pos[0];
 	node->pos[1] = ship->pos[1] + (0.5 * ship->edge_length * ship->team);
-	VecCopy(node->pos, node->lastpos);
 
 	// Set laser velocity (assuming constant for now)
 	node->vel[0] = 0.0f;
@@ -499,19 +510,28 @@ void laser_fire(Ship *ship) {
 
 void physics(void)
 {
-	// move player's ship based on most current input
-	if(input_directions && player_ship->can_move) {
-		VecCopy(player_ship->pos, player_ship->lastpos);
-		if(input_directions & INPUT_LEFT)
-		    if (player_ship->pos[0] > halfpad+ (player_ship->edge_length/2))
-		    player_ship->pos[0] -= 10.0;
-		if(input_directions & INPUT_RIGHT)
-		   if (player_ship->pos[0] < xres-halfpad-(player_ship->edge_length/2))
-		    player_ship->pos[0] += 10.0;
-		if(input_directions & INPUT_UP)    player_ship->pos[1] += 10.0;
-		if(input_directions & INPUT_DOWN)  player_ship->pos[1] -= 10.0;
-	}
+	// Move player's ship destination based on most current input
+	// Target destination is arbitrary in magnitude but should never be
+	// attainable in one frame. By having the concept of a "destination" for
+	// each ship, AI will be much simpler and all ships can have the same
+	// movement routine.
 
+	VecCopy(player_ship->pos, player_ship->dest);
+	if(input_directions & INPUT_LEFT) {
+		player_ship->dest[0] -= 50.0;
+		if(player_ship->dest[0] < halfpad+ (player_ship->edge_length/2))
+			player_ship->dest[0] = halfpad+ (player_ship->edge_length/2);
+	}
+	if(input_directions & INPUT_RIGHT) {
+		player_ship->dest[0] += 50.0;
+	   if(player_ship->dest[0] > xres-halfpad-(player_ship->edge_length/2))
+			player_ship->dest[0] =xres-halfpad-(player_ship->edge_length/2);
+	}
+	if(input_directions & INPUT_UP)    player_ship->dest[1] += 50.0;
+	if(input_directions & INPUT_DOWN)  player_ship->dest[1] -= 50.0;
+
+	ship_move_frame(player_ship); // Player movement
+	g_list_foreach(enemies_list, (GFunc)ship_move_frame, NULL); // Enemy movement
 	g_list_foreach(enemies_list, (GFunc)ship_enemy_attack_logic, NULL); // Enemy lasers/etc
 	g_list_foreach(laser_list, (GFunc)laser_move_frame, NULL); // Update laser positions
 	g_list_foreach(laser_list, (GFunc)laser_check_collision, NULL); // Run collision detection

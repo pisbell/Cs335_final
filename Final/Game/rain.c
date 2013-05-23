@@ -74,7 +74,7 @@ typedef struct t_ship {
 
 
 GList *laser_list = NULL;
-
+Ship *enemy_ship  = NULL;
 Ship *player_ship = NULL;
 GLuint ship_textures[SHIP_COUNT];
 GLuint background_texture;
@@ -99,13 +99,14 @@ int main(int argc, char **argv)
 	open_log_file();
 	srand((unsigned int)time(NULL));
 	//
-	player_ship = ship_create(SHIP_XWING, TEAM_REBELS, xres/2, 100.0); //TODO: Let player select ship (other than debug toggles)
 	glfwInit();
 	srand(time(NULL));
 	nmodes = glfwGetVideoModes(glist, 100);
 	xres = glist[nmodes-1].Width;
 	yres = glist[nmodes-1].Height;
 	Log("setting window to: %i x %i\n",xres,yres);
+	player_ship = ship_create(SHIP_INTERCEPTER, TEAM_REBELS, xres/2, 100.0); //TODO: Let player select ship (other than debug toggles)
+        enemy_ship = ship_create(SHIP_FIGHTER, TEAM_EMPIRE, xres/2, yres/2);
 	//if (!glfwOpenWindow(xres, yres, 0, 0, 0, 0, 0, 0, GLFW_WINDOW)) {
 	if (!glfwOpenWindow(xres,yres,8,8,8,0,32,0,GLFW_FULLSCREEN)) {
 		close_log_file();
@@ -220,7 +221,12 @@ void checkkey(int k1, int k2)
 		int newtype = player_ship->shiptype += 1;
 		if(newtype == SHIP_COUNT)
 			newtype = 0;
-		player_ship = ship_create(newtype, player_ship->team, player_ship->pos[0], player_ship->pos[1]);
+		int newteam = player_ship->team;
+		int xpos    = player_ship->pos[0];
+		int ypos    = player_ship->pos[1];
+
+		free(player_ship);
+		player_ship = ship_create(newtype, newteam, xpos, ypos);
 		return;
 	}
 	if (k1 == '-') {
@@ -298,6 +304,8 @@ void render(GLvoid)
 
 	if(player_ship->is_visible)
 		ship_render(player_ship);
+	
+	ship_render(enemy_ship);
 
 	if (show_text) {
 		//draw some text

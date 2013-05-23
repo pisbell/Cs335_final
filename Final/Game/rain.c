@@ -98,7 +98,7 @@ int main(int argc, char **argv)
 	open_log_file();
 	srand((unsigned int)time(NULL));
 	//
-	player_ship = ship_create(SHIP_XWING, TEAM_REBELS, xres/2, 100.0); //TODO: Let player select ship (other than debug toggles)
+	player_ship = ship_create(SHIP_INTERCEPTER, TEAM_REBELS, xres/2, 100.0); //TODO: Let player select ship (other than debug toggles)
 
 	Ship *enemytmp = NULL;
 	enemytmp = ship_create(SHIP_FIGHTER, TEAM_EMPIRE, xres/4, 5*yres/6);
@@ -232,7 +232,12 @@ void checkkey(int k1, int k2)
 		int newtype = player_ship->shiptype += 1;
 		if(newtype == SHIP_COUNT)
 			newtype = 0;
-		player_ship = ship_create(newtype, player_ship->team, player_ship->pos[0], player_ship->pos[1]);
+		int newteam = player_ship->team;
+		int xpos    = player_ship->pos[0];
+		int ypos    = player_ship->pos[1];
+
+		free(player_ship);
+		player_ship = ship_create(newtype, newteam, xpos, ypos);
 		return;
 	}
 	if (k1 == '-') {

@@ -8,26 +8,18 @@
 #include <math.h>
 #include <time.h>
 #include <glib.h>
+#include <GL/glfw.h>
+
+#include "constants.h"
 
 //These components can be turned on and off
 #define USE_FONTS
 #define USE_LOG
 
-// Designates teams for ships/weapons, to prevent friendly fire.
-#define TEAM_EMPIRE (-1)
-#define TEAM_REBELS 1
-
-// Bitmask values for arrow key inputs.
-#define INPUT_UP 0x1
-#define INPUT_DOWN 0x2
-#define INPUT_LEFT 0x4
-#define INPUT_RIGHT 0x8
-
 #ifdef USE_LOG
 #include "log.h"
 #endif //USE_LOG
 #include "defs.h"
-#include <GL/glfw.h>
 
 #ifdef USE_FONTS
 #include "fonts.h"
@@ -41,7 +33,6 @@
 const float timeslice = 1.0f/60.0f;
 
 //prototypes
-void init(void);
 int InitGL(GLvoid);
 void checkkey(int k1, int k2);
 void physics(void);
@@ -51,55 +42,7 @@ extern GLuint tex_readgl_bmp(char *fileName, int alpha_channel);
 
 //global variables and constants
 int time_control=1;
-int xres=800;
-int yres=600;
-int pad = 500; // For empty space on sides of screen
-int halfpad = 250;
 int input_directions=0; //bitmask of arrow keys currently down, see INPUT_* macros
-
-
-//ship global declarations 
-int tFighter      = 1;
-int tBomber       = 2;
-int tIntercepter  = 3;
-int tOpressor     = 4;
-int aWing         = 5;
-int xWing         = 6;
-int Diffculty     = 0;
-
-
-int statsHealth  [6][3] = { 
-    { 100, 200, 300},
-    {  50,  75, 150},
-    { 200, 300, 400},
-    { 300, 400, 500},
-    {1000, 800, 650},
-    { 800, 750, 600}
-};
-int statsShields [6][3] = {
-    { 100, 200, 300},
-    { 150, 225, 350},
-    {  50,  75, 150},
-    { 100, 200, 300},
-    {1000, 700, 500},
-    { 750, 500, 350}
-};
-int statsDamage  [6][3] = {
-    { 100, 175, 225},
-    { 150, 250, 300},
-    {   2,   6,   9},
-    { 400, 500, 600},
-    {  75,  75,  75},
-    { 100, 100, 100}
-};
-int statsShotfreq[6][3] = {
-    {  15,  25,  40},
-    {   5,  15,  25},
-    {  40,  70,  95},
-    {   5,  10,  15},
-    {   2,   2,   2},
-    {   5,   5,   5}
-};
 
 typedef struct t_laser {
 	int team;
@@ -107,7 +50,6 @@ typedef struct t_laser {
 	Vec pos;
 	Vec lastpos;
 	Vec vel;
-	Vec maxvel;
 	float length;
 	float color[4];
 } Laser;
@@ -122,8 +64,8 @@ typedef struct t_ship {
 	int is_vulnerable; // Is ship vulnerable to hostile fire?
 	int is_visible; // Are we drawing the ship?
 	int can_attack; // Can the ship fire?
+	int can_move; // Can the ship move?
 	Vec vel;
-	Vec maxvel;
 	Vec pos;
 	Vec lastpos;
 	float edge_length; // Edge size of square texture
@@ -133,10 +75,12 @@ typedef struct t_ship {
 
 GList *laser_list = NULL;
 
-Ship player_ship;
-GLuint umbrella_texture;
+Ship *player_ship = NULL;
+GLuint ship_textures[SHIP_COUNT];
 GLuint background_texture;
-void render_ship(Ship *ship);
+
+void ship_render(Ship *ship);
+Ship* ship_create(int shiptype, int team, int xpos, int ypos);
 
 void laser_move_frame(Laser *node);
 void laser_check_collision(Laser *node);
@@ -144,7 +88,8 @@ void laser_render(Laser *node);
 void laser_fire(Ship *ship);
 
 int show_lasers      = 1;
-int show_text      = 0;
+int show_text      = 1;
+int difficulty = DIFFICULTY_EASY;
 
 
 int main(int argc, char **argv)
@@ -154,6 +99,7 @@ int main(int argc, char **argv)
 	open_log_file();
 	srand((unsigned int)time(NULL));
 	//
+	player_ship = ship_create(SHIP_XWING, TEAM_REBELS, xres/2, 100.0); //TODO: Let player select ship (other than debug toggles)
 	glfwInit();
 	srand(time(NULL));
 	nmodes = glfwGetVideoModes(glist, 100);
@@ -169,7 +115,6 @@ int main(int argc, char **argv)
 
 	glfwSetWindowTitle("STAR WARS Galaga");
 	glfwSetWindowPos(0, 0);
-	init();
 	InitGL();
 	glfwSetKeyCallback((GLFWkeyfun)(checkkey));
 	glfwDisable( GLFW_MOUSE_CURSOR );
@@ -206,55 +151,25 @@ int main(int argc, char **argv)
 
 void checkkey(int k1, int k2)
 {
-	static int shift=0;
 	if (k2 == GLFW_PRESS) {
-		//some key is being pressed now
-		if (k1 == GLFW_KEY_LSHIFT || k1 == GLFW_KEY_RSHIFT) {
-			//it is a shift key
-			shift=1;
-			return;
-		}
 		// Set the flag for the given arrow key if pressed
-		//else if(k1 == GLFW_KEY_UP) input_directions |= INPUT_UP;
-		//else if(k1 == GLFW_KEY_DOWN) input_directions |= INPUT_DOWN;
-		else if(k1 == GLFW_KEY_LEFT) input_directions |= INPUT_LEFT;
-		else if(k1 == GLFW_KEY_RIGHT) input_directions |= INPUT_RIGHT;
-	}else if (k2 == GLFW_RELEASE) {
-		if (k1 == GLFW_KEY_LSHIFT || k1 == GLFW_KEY_RSHIFT) {
-			//the shift key was released
-			shift=0;
-		}
+		if(k1 == GLFW_KEY_LEFT) input_directions |= INPUT_LEFT;
+		if(k1 == GLFW_KEY_RIGHT) input_directions |= INPUT_RIGHT;
+
+	} else if (k2 == GLFW_RELEASE) {
 		// Unset the flag for the given arrow key if released
-		//else if(k1 == GLFW_KEY_UP)    input_directions &= ~INPUT_UP;
-		//else if(k1 == GLFW_KEY_DOWN)  input_directions &= ~INPUT_DOWN;
-		else if(k1 == GLFW_KEY_LEFT) input_directions &= ~INPUT_LEFT;
-		else if(k1 == GLFW_KEY_RIGHT) input_directions &= ~INPUT_RIGHT;
+		if(k1 == GLFW_KEY_LEFT) input_directions &= ~INPUT_LEFT;
+		if(k1 == GLFW_KEY_RIGHT) input_directions &= ~INPUT_RIGHT;
 
 		//don't process any other keys on a release
-		else return;
+		return;
 	}
 
+	if (k1 == ' ' && player_ship->can_attack) {
+		laser_fire(player_ship);
+		return;
+	}
 
-	if (k1 == 'R') {
-		show_lasers ^= 1;
-		return;
-	}
-	if (k1 == 'T') {
-		show_text ^= 1;
-		return;
-	}
-	if (k1 == 'U') {
-		player_ship.is_visible ^= 1;
-		return;
-	}
-	if (k1 == 'V') {
-		player_ship.is_vulnerable ^= 1;
-		return;
-	}
-	if (k1 == 'A') {
-		player_ship.can_attack ^= 1;
-		return;
-	}
 	if (k1 == '`') {
 		if (--time_control < 0)
 			time_control = 0;
@@ -265,36 +180,56 @@ void checkkey(int k1, int k2)
 			time_control = 32;
 		return;
 	}
-	if (k1 == 'W') {
-		if (shift) {
-			//shrink the player_ship
-			player_ship.edge_length *= (1.0 / 1.05);
-		} else {
-			//enlarge the player_ship
-			player_ship.edge_length *= 1.05;
-		}
-		//hit box is circle inscribed in texture edges
-		player_ship.hitbox_radius = player_ship.edge_length * 0.5;
+	if (k1 == '2') {
+		//shrink the player_ship
+		player_ship->edge_length *= (1.0 / 1.05);
+		player_ship->hitbox_radius = player_ship->edge_length * 0.5;
 		return;
 	}
-	if (player_ship.can_attack) {
-		if (k1 == ' ')  {
-			laser_fire(&player_ship);
-		}
+	if (k1 == '3') {
+		//enlarge the player_ship
+		player_ship->edge_length *= 1.05;
+		player_ship->hitbox_radius = player_ship->edge_length * 0.5;
+		return;
 	}
-}
-
-void init(void)
-{
-	player_ship.pos[0] = xres/2;
-	player_ship.pos[1] = 100.0;
-	VecCopy(player_ship.pos, player_ship.lastpos);
-	player_ship.edge_length = 75.0;
-	player_ship.hitbox_radius = player_ship.edge_length * .75;
-	player_ship.team = TEAM_REBELS;
-	player_ship.is_vulnerable = 1;
-	player_ship.is_visible = 1;
-	player_ship.can_attack = 1;
+	if (k1 == '4') {
+		show_lasers ^= 1;
+		return;
+	}
+	if (k1 == '5') {
+		show_text ^= 1;
+		return;
+	}
+	if (k1 == '6') {
+		player_ship->is_visible ^= 1;
+		return;
+	}
+	if (k1 == '7') {
+		player_ship->is_vulnerable ^= 1;
+		return;
+	}
+	if (k1 == '8') {
+		player_ship->can_attack ^= 1;
+		return;
+	}
+	if (k1 == '9') {
+		player_ship->can_move ^= 1;
+		return;
+	}
+	if (k1 == '0') {
+		int newtype = player_ship->shiptype += 1;
+		if(newtype == SHIP_COUNT)
+			newtype = 0;
+		player_ship = ship_create(newtype, player_ship->team, player_ship->pos[0], player_ship->pos[1]);
+		return;
+	}
+	if (k1 == '-') {
+		if(player_ship->team == TEAM_REBELS)
+			player_ship->team = TEAM_EMPIRE;
+		else
+			player_ship->team = TEAM_REBELS;
+		return;
+	}
 }
 
 int InitGL(GLvoid)
@@ -306,7 +241,12 @@ int InitGL(GLvoid)
 	glClearColor(0.1f, 0.2f, 0.3f, 0.0f);
 	
 	background_texture = loadBMP("bg.bmp");
-    umbrella_texture = tex_readgl_bmp("XWing.bmp", 1.0);
+    ship_textures[SHIP_FIGHTER] = tex_readgl_bmp("Fighter.bmp", 1.0);
+    ship_textures[SHIP_BOMBER] = tex_readgl_bmp("Bomber.bmp", 1.0);
+    ship_textures[SHIP_INTERCEPTER] = tex_readgl_bmp("Interceptor.bmp", 1.0);
+    ship_textures[SHIP_OPRESSOR] = tex_readgl_bmp("Oppressor.bmp", 1.0);
+    ship_textures[SHIP_AWING] = tex_readgl_bmp("AWing.bmp", 1.0);
+    ship_textures[SHIP_XWING] = tex_readgl_bmp("XWing.bmp", 1.0);
 	return 1;
 }
 
@@ -356,30 +296,39 @@ void render(GLvoid)
 	}
 	glDisable(GL_BLEND);
 
-	if(player_ship.is_visible)
-		render_ship(&player_ship);
+	if(player_ship->is_visible)
+		ship_render(player_ship);
 
 	if (show_text) {
 		//draw some text
 		Rect r;
 		r.left   = 10;
-		r.bot    = 120;
+		r.bot    = 200;
 		r.center = 0;
-		ggprint12(&r, 16, 0x00cc6622, "<R> Render lasers: %s",show_lasers==1?"On":"Off");
-		ggprint12(&r, 16, 0x00cc6622, "<U> Visible: %s",player_ship.is_visible==1?"On":"Off");
-		ggprint12(&r, 16, 0x00aaaa00, "<V> Vulnerable: %s:",player_ship.is_vulnerable==1?"On":"Off");
-		ggprint12(&r, 16, 0x00aaaa00, "<A> Attack: %s:",player_ship.can_attack==1?"On":"Off");
+		ggprint16(&r, 16, 0x00cc6622, "< > Fire laser", NULL);
+		ggprint16(&r, 16, 0x00aa00aa, "<`> Slow game", NULL);
+		ggprint16(&r, 16, 0x00aa00aa, "<1> Speedup game", NULL);
+		ggprint16(&r, 16, 0x0000aaaa, "<2> Shrink ship", NULL);
+		ggprint16(&r, 16, 0x0000aaaa, "<3> Grow ship", NULL);
+		ggprint16(&r, 16, 0x00aaaa00, "<4> Render lasers: %s",show_lasers==1?"On":"Off");
+		ggprint16(&r, 16, 0x00aaaa00, "<5> Render text: %s",show_text==1?"On":"Off");
+		ggprint16(&r, 16, 0x00aaaa00, "<6> Render ship: %s",player_ship->is_visible==1?"On":"Off");
+		ggprint16(&r, 16, 0x00aaaa00, "<7> Enable vulnerablility: %s",player_ship->is_vulnerable==1?"On":"Off");
+		ggprint16(&r, 16, 0x00aaaa00, "<8> Enable attack: %s",player_ship->can_attack==1?"On":"Off");
+		ggprint16(&r, 16, 0x00aaaa00, "<9> Enable movement: %s",player_ship->can_move==1?"On":"Off");
+		ggprint16(&r, 16, 0x00aaaa00, "<0> Cycle ships: %d",player_ship->shiptype);
+		ggprint16(&r, 16, 0x00aaaa00, "<-> Cycle teams: %s",player_ship->team==TEAM_REBELS?"Rebels":"Empire");
 	}
 }
 
-void render_ship(Ship *ship)
+void ship_render(Ship *ship)
 {
 	glColor4f(1.0f, 1.0f, 1.0f, 0.8f);
 	glPushMatrix();
 	glTranslatef(ship->pos[0], ship->pos[1], ship->pos[2]);
 	glEnable(GL_ALPHA_TEST);
 	glAlphaFunc(GL_GREATER, 0.0f);
-	glBindTexture(GL_TEXTURE_2D, umbrella_texture); //TODO: vary texture bmp/orientation based on ship->shiptype
+	glBindTexture(GL_TEXTURE_2D, ship_textures[ship->shiptype]);
 	glBegin(GL_QUADS);
 		float w = ship->edge_length * 0.5;
 		glTexCoord2f(0.0f, 0.0f); glVertex2f(-w, -w);
@@ -418,12 +367,12 @@ void laser_check_collision(Laser *node) {
 	if(node->team == TEAM_REBELS) {
 		//TODO: iterate over enemy ships, check hitboxes
 	} else if(node->team == TEAM_EMPIRE) {
-		if(player_ship.is_vulnerable) {
+		if(player_ship->is_vulnerable) {
 			//collision detection for raindrop on player_ship
-			float d0 = node->pos[0] - player_ship.pos[0];
-			float d1 = node->pos[1] - player_ship.pos[1];
+			float d0 = node->pos[0] - player_ship->pos[0];
+			float d1 = node->pos[1] - player_ship->pos[1];
 			float distance = sqrt((d0*d0)+(d1*d1));
-			if (distance <= player_ship.hitbox_radius) {
+			if (distance <= player_ship->hitbox_radius) {
 				//TODO: damage shields/health/explode here
 				laser_list = g_list_remove(laser_list, node);
 				free(node);
@@ -437,6 +386,37 @@ void laser_check_collision(Laser *node) {
 		laser_list = g_list_remove(laser_list, node);
 		free(node);
 	}
+}
+
+Ship* ship_create(int shiptype, int team, int xpos, int ypos) {
+	Ship *ship = (Ship *)malloc(sizeof(Ship));
+	if (ship == NULL) {
+		Log("error allocating node.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	ship->team = team;
+	ship->shiptype = shiptype;
+	ship->health = statsHealth[shiptype][difficulty];
+	ship->shields = statsShields[shiptype][difficulty];
+	ship->damage = statsDamage[shiptype][difficulty];
+	ship->shotfreq = statsShotfreq[shiptype][difficulty];
+
+	ship->is_vulnerable = 1;
+	ship->is_visible = 1;
+	ship->can_attack = 1;
+	ship->can_move = 1;
+
+	ship->vel[0] = 0;
+	ship->vel[1] = 0;
+	ship->pos[0] = xpos;
+	ship->pos[1] = ypos;
+	VecCopy(ship->pos, ship->lastpos);
+
+	ship->edge_length = statsEdgeLength[shiptype];
+	ship->hitbox_radius = statsHitboxRadius[shiptype];
+
+	return ship;
 }
 
 double VecNormalize(Vec vec) {
@@ -482,7 +462,6 @@ void laser_fire(Ship *ship) {
 	node->color[3] = 1.0;
 
 	node->linewidth = random(3)+2;
-	node->maxvel[1] = (float)(node->linewidth*16);
 	node->length = 20;
 
 	// Add to global list of active lasers
@@ -492,16 +471,16 @@ void laser_fire(Ship *ship) {
 void physics(void)
 {
 	// move player's ship based on most current input
-	if(input_directions) {
-		VecCopy(player_ship.pos, player_ship.lastpos);
+	if(input_directions && player_ship->can_move) {
+		VecCopy(player_ship->pos, player_ship->lastpos);
 		if(input_directions & INPUT_LEFT)
-		    if (player_ship.pos[0] > halfpad+ (player_ship.edge_length/2))
-		    player_ship.pos[0] -= 10.0;
+		    if (player_ship->pos[0] > halfpad+ (player_ship->edge_length/2))
+		    player_ship->pos[0] -= 10.0;
 		if(input_directions & INPUT_RIGHT)
-		   if (player_ship.pos[0] < xres-halfpad-(player_ship.edge_length/2))
-		    player_ship.pos[0] += 10.0;
-		if(input_directions & INPUT_UP)    player_ship.pos[1] += 10.0;
-		if(input_directions & INPUT_DOWN)  player_ship.pos[1] -= 10.0;
+		   if (player_ship->pos[0] < xres-halfpad-(player_ship->edge_length/2))
+		    player_ship->pos[0] += 10.0;
+		if(input_directions & INPUT_UP)    player_ship->pos[1] += 10.0;
+		if(input_directions & INPUT_DOWN)  player_ship->pos[1] -= 10.0;
 	}
 
 	//move rain droplets

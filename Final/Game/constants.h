@@ -49,12 +49,29 @@ int statsDamage[SHIP_COUNT][DIFFICULTY_COUNT] = {
     { 100, 100, 100}
 };
 int statsShotfreq[SHIP_COUNT][DIFFICULTY_COUNT] = {
+    {  40,  25,  40},
+    {  25,  15,  25},
+    {  40,  70,  95},
+    {   5,  10,  15},
+    {   2,   2,   2},
+    {   5,   5,   5}
+};
+int statsSpeed[SHIP_COUNT][DIFFICULTY_COUNT] = {
     {  15,  25,  40},
     {   5,  15,  25},
     {  40,  70,  95},
     {   5,  10,  15},
     {   2,   2,   2},
     {   5,   5,   5}
+};
+
+int statsScore[SHIP_COUNT][DIFFICULTY_COUNT] = {
+    { 100, 100, 100},
+    { 200, 200, 200},
+    { 250, 250, 250},
+    { 350, 350, 350},
+    {-250,-200,-100},
+    {-200,-150,-100}
 };
 
 float statsEdgeLength[SHIP_COUNT] = {

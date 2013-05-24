@@ -1,6 +1,7 @@
-//cs335 - Spring 2013
-//program: Rain drops
-//author:  Gordon Griesel
+// CS 335 - Spring 2013 Final
+// Program: STAR WARS Galaga
+// Authors: Jacob Courtney, Patrick Isbell, Terry McIrvin
+// Based on code by Gordon Griesel
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,6 +12,7 @@
 #include <GL/glfw.h>
 
 #include "constants.h"
+#include "defs.h"
 
 //These components can be turned on and off
 #define USE_FONTS
@@ -19,7 +21,6 @@
 #ifdef USE_LOG
 #include "log.h"
 #endif //USE_LOG
-#include "defs.h"
 
 #ifdef USE_FONTS
 #include "fonts.h"
@@ -41,8 +42,8 @@ extern GLuint loadBMP(const char *imagepath);
 extern GLuint tex_readgl_bmp(char *fileName, int alpha_channel);
 
 //global variables and constants
-int time_control=1;
-int input_directions=0; //bitmask of arrow keys currently down, see INPUT_* macros
+int time_control = 2;
+int input_directions = 0; //bitmask of arrow keys currently down, see INPUT_* macros
 
 typedef struct t_laser {
 	int team;
@@ -54,20 +55,20 @@ typedef struct t_laser {
 } Laser;
 
 typedef struct t_ship {
-	int team; // TEAM_REBELS or TEAM_EMPIRE
+	int team; 	     // TEAM_REBELS or TEAM_EMPIRE
 	int shiptype;
 	int health;
 	int shields;
 	int damage;
 	int shotfreq;
-	int is_vulnerable; // Is ship vulnerable to hostile fire?
-	int is_visible; // Are we drawing the ship?
-	int can_attack; // Can the ship fire?
-	int can_move; // Can the ship move?
-	Vec pos; // Current position
-	Vec dest; // Where the ship "wants" to go
-	float speed; // Speed ship will move at (not current speed, and there is no acceleration)
-	float edge_length; // Edge size of square texture
+	int is_vulnerable;   // Is ship vulnerable to hostile fire?
+	int is_visible;      // Are we drawing the ship?
+	int can_attack;      // Can the ship fire?
+	int can_move; 	     // Can the ship move?
+	Vec pos; 	     // Current position
+	Vec dest; 	     // Where the ship "wants" to go
+	float speed; 	     // Speed ship will move at (not current speed, and there is no acceleration)
+	float edge_length;   // Edge size of square texture
 	float hitbox_radius; // Radius of circular hitbox
 } Ship;
 
@@ -94,11 +95,14 @@ int difficulty = DIFFICULTY_EASY;
 int main(int argc, char **argv)
 {
 	int i, nmodes;
+	int ship_select = 4;	// For player to choose ship
 	GLFWvidmode glist[256];
 	open_log_file();
 	srand((unsigned int)time(NULL));
-	//
-	player_ship = ship_create(SHIP_INTERCEPTER, TEAM_REBELS, xres/2, 100.0); //TODO: Let player select ship (other than debug toggles)
+	
+	player_ship = ship_create(ship_select, TEAM_REBELS, xres/2, 100.0); 
+	//TODO: On menu, when player selects play, present ship selection 
+	//screen.  Ship choice sets ship_select variable.
 
 	Ship *enemytmp = NULL;
 	enemytmp = ship_create(SHIP_FIGHTER, TEAM_EMPIRE, xres/4, 5*yres/6);
@@ -183,13 +187,13 @@ void checkkey(int k1, int k2)
 	}
 
 	if (k1 == '`') {
-		if (--time_control < 0)
-			time_control = 0;
+		if (--time_control < 1)
+			time_control = 1;
 		return;
 	}
 	if (k1 == '1') {
-		if (++time_control > 32)
-			time_control = 32;
+		if (++time_control > 3)
+			time_control = 3;
 		return;
 	}
 	if (k1 == '2') {
@@ -402,7 +406,11 @@ void ship_laser_check_collision(Ship *ship, Laser *laser) {
 		float d1 = laser->pos[1] - ship->pos[1];
 		float distance = sqrt((d0*d0)+(d1*d1));
 		if (distance <= ship->hitbox_radius) {
-			//TODO: damage shields/health/explode here
+//		    ship->health -= ship->damage;
+//		    if (ship->health <= 0)
+//			free(ship);
+			
+		    //TODO: damage shields/health/explode here
 			laser_list = g_list_remove(laser_list, laser);
 			free(laser);
 			return;
@@ -449,7 +457,7 @@ Ship* ship_create(int shiptype, int team, int xpos, int ypos) {
 	ship->shields = statsShields[shiptype][difficulty];
 	ship->damage = statsDamage[shiptype][difficulty];
 	ship->shotfreq = statsShotfreq[shiptype][difficulty];
-	ship->speed = statsSpeed[shiptype][difficulty];
+	ship->speed = (statsSpeed[shiptype][difficulty]) / 2;
 
 	ship->is_vulnerable = 1;
 	ship->is_visible = 1;

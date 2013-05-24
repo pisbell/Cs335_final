@@ -102,22 +102,6 @@ int main(int argc, char **argv)
 	open_log_file();
 	srand((unsigned int)time(NULL));
 	
-<<<<<<< HEAD
-=======
-	player_ship = ship_create(ship_select, TEAM_REBELS, xres/2, 100.0); 
-	//TODO: On menu, when player selects play, present ship selection 
-	//screen.  Ship choice sets ship_select variable.
-
-	Ship *enemytmp = NULL;
-	enemytmp = ship_create(SHIP_FIGHTER, TEAM_EMPIRE, xres/4, 5*yres/6);
-	enemies_list = g_list_prepend(enemies_list, enemytmp);
-	enemytmp = ship_create(SHIP_BOMBER, TEAM_EMPIRE, 2*xres/4, 3*yres/6);
-	enemies_list = g_list_prepend(enemies_list, enemytmp);
-	enemytmp = ship_create(SHIP_OPRESSOR, TEAM_EMPIRE, 3*xres/4, 5*yres/6);
-	enemies_list = g_list_prepend(enemies_list, enemytmp);
-
-
->>>>>>> fb8dc230b6a99253721586c264114657b3fbf02d
 	glfwInit();
 	srand(time(NULL));
 	nmodes = glfwGetVideoModes(glist, 100);
@@ -427,7 +411,6 @@ void ship_laser_check_collision(Ship *ship, Laser *laser) {
 		float d1 = laser->pos[1] - ship->pos[1];
 		float distance = sqrt((d0*d0)+(d1*d1));
 		if (distance <= ship->hitbox_radius) {
-<<<<<<< HEAD
      	            if (ship->shields >= 0)
 			ship->shields -= laser->damage;
 		    else
@@ -435,13 +418,6 @@ void ship_laser_check_collision(Ship *ship, Laser *laser) {
 //			free(ship);
 			
 		    //TODO: explode here
-=======
-//		    ship->health -= ship->damage;
-//		    if (ship->health <= 0)
-//			free(ship);
-			
-		    //TODO: damage shields/health/explode here
->>>>>>> fb8dc230b6a99253721586c264114657b3fbf02d
 			laser_list = g_list_remove(laser_list, laser);
 			free(laser);
 			return;
@@ -452,7 +428,6 @@ void ship_laser_check_collision(Ship *ship, Laser *laser) {
 void ship_enemy_attack_logic(Ship *ship) {
 	if(!ship->can_attack)
 		return;
-<<<<<<< HEAD
 	if(random(10000) < ship->shotfreq)
 		laser_fire(ship);
 }
@@ -460,15 +435,6 @@ void ship_enemy_attack_logic(Ship *ship) {
 void laser_check_collision(Laser *laser) {
 	// Checks given laser for collisions with all applicable ships.
 
-=======
-	if(random(100) < ship->shotfreq)
-		laser_fire(ship);
-}
-
-void laser_check_collision(Laser *laser) {
-	// Checks given laser for collisions with all applicable ships.
-
->>>>>>> fb8dc230b6a99253721586c264114657b3fbf02d
 	if (laser->pos[1] <= -1.0f * laser->length || laser->pos[1] >= yres + laser->length) {
 		// Laser is above or below screen, remove it.
 		laser_list = g_list_remove(laser_list, laser);
@@ -544,11 +510,7 @@ void laser_fire(Ship *ship) {
 
 	node->pos[0] = ship->pos[0];
 	node->pos[1] = ship->pos[1] + (0.5 * ship->edge_length * ship->team);
-<<<<<<< HEAD
 	node->damage = ship->damage;
-=======
-
->>>>>>> fb8dc230b6a99253721586c264114657b3fbf02d
 	// Set laser velocity (assuming constant for now)
 	node->vel[0] = 0.0f;
 	node->vel[1] = node->team * 200.0f;

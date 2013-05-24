@@ -64,6 +64,14 @@ int statsSpeed[SHIP_COUNT][DIFFICULTY_COUNT] = {
     {   2,   2,   2},
     {   5,   5,   5}
 };
+int statsSpeed[SHIP_COUNT][DIFFICULTY_COUNT] = {
+    {  15,  25,  40},
+    {   5,  15,  25},
+    {  40,  70,  95},
+    {   5,  10,  15},
+    {   2,   2,   2},
+    {   5,   5,   5}
+};
 
 int statsScore[SHIP_COUNT][DIFFICULTY_COUNT] = {
     { 100, 100, 100},

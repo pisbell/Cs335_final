@@ -345,6 +345,32 @@ void render(GLvoid)
 	}
 }
 
+float* ship_calculate_shield_color(Ship *ship) {
+	float* out_color = malloc(4*sizeof(float));
+	out_color[3] = 0.3f;
+
+	float full_color[3] =  {0.0f, 1.0f, 0.0f};
+	float mid_color[3] =   {1.0f, 1.0f, 0.0f};
+	float empty_color[3] = {1.0f, 0.0f, 0.0f};
+
+	float halfshield = statsShields[ship->shiptype][difficulty]/2;
+	if(ship->shields > halfshield) {
+		float remaining = (ship->shields - halfshield) / halfshield;
+		float gone = 1 - remaining;
+		out_color[0] = full_color[0] * remaining + mid_color[0] * gone;
+		out_color[1] = full_color[1] * remaining + mid_color[1] * gone;
+		out_color[2] = full_color[2] * remaining + mid_color[2] * gone;
+	} else {
+		float remaining = ship->shields / halfshield;
+		float gone = 1 - remaining;
+		out_color[0] = mid_color[0] * remaining + empty_color[0] * gone;
+		out_color[1] = mid_color[1] * remaining + empty_color[1] * gone;
+		out_color[2] = mid_color[2] * remaining + empty_color[2] * gone;
+	}
+
+	return out_color;
+}
+
 void ship_render(Ship *ship)
 {
 	int circle_i;
@@ -367,18 +393,22 @@ void ship_render(Ship *ship)
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glDisable(GL_ALPHA_TEST);
 
-	glEnable(GL_BLEND);
-	glBegin(GL_TRIANGLE_FAN);
-		glColor4f(0.0f, 1.0f, 0.0f, 0.3f);
-		glVertex2f(0, 0);
+	if(ship->shields > 0) {
+		glEnable(GL_BLEND);
+		glBegin(GL_TRIANGLE_FAN);
+			float *colors = ship_calculate_shield_color(ship);
+			glColor4f(colors[0], colors[1], colors[2], colors[3]);
+			free(colors);
+			glVertex2f(0, 0);
 
-		int slices = 16;
-		float slice_size = 2 * 3.1415926535 / slices;
-		for(circle_i=0; circle_i<=slices; circle_i++) {
-			glVertex2f(w*cosf(circle_i*slice_size), w*sinf(circle_i*slice_size));
-		}
-	glEnd();
-	glDisable(GL_BLEND);
+			int slices = 16;
+			float slice_size = 2 * 3.1415926535 / slices;
+			for(circle_i=0; circle_i<=slices; circle_i++) {
+				glVertex2f(w*cosf(circle_i*slice_size), w*sinf(circle_i*slice_size));
+			}
+		glEnd();
+		glDisable(GL_BLEND);
+	}
 
 	glPopMatrix();
 }

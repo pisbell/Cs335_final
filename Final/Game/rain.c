@@ -174,20 +174,18 @@ void checkkey(int k1, int k2)
 		// Set the flag for the given arrow key if pressed
 		if(k1 == GLFW_KEY_LEFT) input_directions |= INPUT_LEFT;
 		if(k1 == GLFW_KEY_RIGHT) input_directions |= INPUT_RIGHT;
-		if(k1 == GLFW_KEY_SPACE) laser_fire(player_ship);
 	} else if (k2 == GLFW_RELEASE) {
 		// Unset the flag for the given arrow key if released
 		if(k1 == GLFW_KEY_LEFT) input_directions &= ~INPUT_LEFT;
 		if(k1 == GLFW_KEY_RIGHT) input_directions &= ~INPUT_RIGHT;
-		if(k1 == GLFW_KEY_SPACE);
 		//don't process any other keys on a release
 		return;
 	}
 
-//	if (k1 == ' ' && player_ship->can_attack) {
-//		laser_fire(player_ship);
-//		return;
-//	}
+	if (k1 == ' ' && player_ship->can_attack) {
+		laser_fire(player_ship);
+		return;
+	}
 
 	if (k1 == '`') {
 		if (--time_control < 1)
@@ -411,13 +409,17 @@ void ship_laser_check_collision(Ship *ship, Laser *laser) {
 		float d1 = laser->pos[1] - ship->pos[1];
 		float distance = sqrt((d0*d0)+(d1*d1));
 		if (distance <= ship->hitbox_radius) {
-     	            if (ship->shields >= 0)
-			ship->shields -= laser->damage;
-		    else
-			ship->health -= laser->damage;
-//			free(ship);
+			if (ship->shields > 0)
+				ship->shields -= laser->damage;
+			else
+				ship->health -= laser->damage;
+
+			if (ship->health <= 0) {
+				//TODO: explode here, we have to handle results and deallocation differently for player vs enemy ships.
+				//g_list_remove(ship)
+				//free(ship);
+			}
 			
-		    //TODO: explode here
 			laser_list = g_list_remove(laser_list, laser);
 			free(laser);
 			return;
@@ -464,7 +466,7 @@ Ship* ship_create(int shiptype, int team, int xpos, int ypos) {
 	ship->shields = statsShields[shiptype][difficulty];
 	ship->damage = statsDamage[shiptype][difficulty];
 	ship->shotfreq = statsShotfreq[shiptype][difficulty];
-	ship->speed = (statsSpeed[shiptype][difficulty]) / 2;
+	ship->speed = statsSpeed[shiptype][difficulty];
 
 	ship->is_vulnerable = 1;
 	ship->is_visible = 1;

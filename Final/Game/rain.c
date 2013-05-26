@@ -347,6 +347,7 @@ void render(GLvoid)
 
 void ship_render(Ship *ship)
 {
+	int circle_i;
 	if(!ship->is_visible)
 		return;
 
@@ -365,6 +366,20 @@ void ship_render(Ship *ship)
 	glEnd();
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glDisable(GL_ALPHA_TEST);
+
+	glEnable(GL_BLEND);
+	glBegin(GL_TRIANGLE_FAN);
+		glColor4f(0.0f, 1.0f, 0.0f, 0.3f);
+		glVertex2f(0, 0);
+
+		int slices = 16;
+		float slice_size = 2 * 3.1415926535 / slices;
+		for(circle_i=0; circle_i<=slices; circle_i++) {
+			glVertex2f(w*cosf(circle_i*slice_size), w*sinf(circle_i*slice_size));
+		}
+	glEnd();
+	glDisable(GL_BLEND);
+
 	glPopMatrix();
 }
 

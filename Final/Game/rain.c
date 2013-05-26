@@ -401,6 +401,19 @@ void ship_move_frame(Ship *ship) {
 	ship->pos[1] += ydist*scale;
 }
 
+void ship_destroy(Ship *ship) {
+	if(ship == player_ship) {
+		// Actually free()ing ship segfaults the app, just make it dormant.
+		player_ship->is_vulnerable = 0;
+		player_ship->is_visible = 0;
+		player_ship->can_attack = 0;
+		player_ship->can_move = 0;
+	} else {
+		enemies_list = g_list_remove(enemies_list, ship);
+		free(ship);
+	}
+}
+
 void ship_laser_check_collision(Ship *ship, Laser *laser) {
 	// Checks laser and ship pair for collision.
 	if(ship->is_vulnerable && laser->team != ship->team) {
@@ -415,9 +428,7 @@ void ship_laser_check_collision(Ship *ship, Laser *laser) {
 				ship->health -= laser->damage;
 
 			if (ship->health <= 0) {
-				//TODO: explode here, we have to handle results and deallocation differently for player vs enemy ships.
-				//g_list_remove(ship)
-				//free(ship);
+				ship_destroy(ship);
 			}
 			
 			laser_list = g_list_remove(laser_list, laser);

@@ -619,6 +619,12 @@ void ship_enemy_attack_logic(Ship *ship) {
 
 void ship_enemy_move_logic(Ship *ship) {
 	ship->dest[1] = ship->pos[1];
+
+	if(ship->shiptype == SHIP_OPRESSOR) {
+		ship->dest[0] = player_ship->pos[0];
+		return;
+	}
+
 	if(ship->dest[0] == 0 && ship->pos[0] <= halfpad+ (ship->edge_length/2))
 		ship->dest[0] = xres+100;
 	else if(ship->dest[0] >= xres && ship->pos[0] >= xres-halfpad-(ship->edge_length/2))

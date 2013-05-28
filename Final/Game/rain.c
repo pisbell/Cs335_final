@@ -586,8 +586,20 @@ void ship_destroy(Ship *ship) {
 	}
 }
 
-void ship_laser_check_collision(Ship *ship, Laser *laser) {
+void ship_laser_check_collision(Ship *ship, Laser **dplaser) {
 	// Checks laser and ship pair for collision.
+
+	// g_list_foreach just passes the same laser pointer for every ship. If a
+	// collision occurs, the laser must be freed. When a laser hits two ships
+	// at once, a double free error occurs if we simply pass a laser pointer,
+	// as there's no way to tell the struct has been freed within ship_laser_check_collision.
+	// By passing a double pointer, we can mark the laser pointer as NULL when
+	// it has been freed, allowing later iterations to see that the laser has
+	// been destroyed.
+	if(*dplaser == NULL)
+		return;
+
+	Laser *laser = *dplaser;
 	if(ship->is_vulnerable && laser->team != ship->team) {
 		//collision detection for laser on ship
 		float d0 = laser->pos[0] - ship->pos[0];
@@ -605,6 +617,7 @@ void ship_laser_check_collision(Ship *ship, Laser *laser) {
 			
 			laser_list = g_list_remove(laser_list, laser);
 			free(laser);
+			*dplaser = NULL;
 			return;
 		}
 	}
@@ -642,13 +655,15 @@ void laser_check_collision(Laser *laser) {
 		free(laser);
 	}
 
+	Laser **dplaser = &laser; // See ship_laser_check_collision for why we're doing this.
+
 	if(laser->team == TEAM_REBELS) {
 		// Check every enemy ship against our laser.
-		g_list_foreach(enemies_list, (GFunc)ship_laser_check_collision, laser);
+		g_list_foreach(enemies_list, (GFunc)ship_laser_check_collision, dplaser);
 	} else if(laser->team == TEAM_EMPIRE) {
 		// Check our single ship against enemy laser.
 		// (If we made another list for rebel ships, we could possibly do multiplayer.)
-		ship_laser_check_collision(player_ship, laser);
+		ship_laser_check_collision(player_ship, dplaser);
 	}
 }
 

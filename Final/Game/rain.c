@@ -626,6 +626,13 @@ void ship_laser_check_collision(Ship *ship, Laser **dplaser) {
 void ship_enemy_attack_logic(Ship *ship) {
 	if(!ship->can_attack)
 		return;
+
+	if(ship->shiptype == SHIP_BOMBER) {
+		if(abs(ship->pos[0] - player_ship->pos[0]) <= 100 && random(1000) < ship->shotfreq)
+			laser_fire(ship);
+		return;
+	}
+
 	if(random(100000) < ship->shotfreq)
 		laser_fire(ship);
 }

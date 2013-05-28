@@ -32,4 +32,5 @@ clean:
 	rm -f rain
 	rm -f log
 	rm -f *.o
+	rm -f x.x
 

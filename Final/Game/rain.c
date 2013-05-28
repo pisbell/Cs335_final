@@ -30,9 +30,6 @@
 #define rnd() (((double)rand())/(double)RAND_MAX)
 #define random(a) (rand()%a)
 
-//constants
-const float timeslice = 1.0f/60.0f;
-
 //prototypes
 int InitGL(GLvoid);
 void checkkey(int k1, int k2);
@@ -42,7 +39,8 @@ extern GLuint loadBMP(const char *imagepath);
 extern GLuint tex_readgl_bmp(char *fileName, int alpha_channel);
 
 //global variables and constants
-int time_control = 2;
+const float timeslice = 1.0f/60.0f;
+int time_control = 5;
 int input_directions = 0; //bitmask of arrow keys currently down, see INPUT_* macros
 
 typedef struct t_laser {
@@ -193,8 +191,8 @@ void checkkey(int k1, int k2)
 		return;
 	}
 	if (k1 == '1') {
-		if (++time_control > 3)
-			time_control = 3;
+		if (++time_control > 10)
+			time_control = 10;
 		return;
 	}
 	if (k1 == '2') {

@@ -57,9 +57,9 @@ int statsShotfreq[SHIP_COUNT][DIFFICULTY_COUNT] = {
     {   5,   5,   5}
 };
 int statsSpeed[SHIP_COUNT][DIFFICULTY_COUNT] = {
+    {  10,  15,  25},
+    {   5,  10,  15},
     {  15,  25,  40},
-    {   5,  15,  25},
-    {  40,  70,  95},
     {   5,  10,  15},
     {   2,   2,   2},
     {   5,   5,   5}

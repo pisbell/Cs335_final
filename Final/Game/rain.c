@@ -61,6 +61,7 @@ typedef struct t_ship {
 	int shields;
 	int damage;
 	int shotfreq;
+	int laser_width;
 	int is_vulnerable;   // Is ship vulnerable to hostile fire?
 	int is_visible;      // Are we drawing the ship?
 	int can_attack;      // Can the ship fire?
@@ -119,7 +120,7 @@ int main(int argc, char **argv)
 	//enemytmp = ship_create(SHIP_OPRESSOR, TEAM_EMPIRE, 3*xres/4, 5*yres/6);
 	//enemies_list = g_list_prepend(enemies_list, enemytmp);
 	
-	enemyFormation(8, 8, 8, 8); // takes # of each enemies we want,
+	enemyFormation( 5, 6, 14, 15); // takes # of each enemies we want,
 
 
 	Log("setting window to: %i x %i\n",xres,yres);
@@ -429,20 +430,23 @@ void laser_render(Laser *node) {
 void enemyFormation( int OppressorNum, int InterceptorNum,int BomberNum, int FighterNum)
 {
     int playspace = xres-pad;
-    int MaxEnemyScreen = (playspace/76 )-2;
+    int MaxEnemyScreen = (playspace/80 )-2;
     int epPoint = yres - 100;
     int EnemyRow = 0;
     int topEnemies = 0;
-    int spread = 0;;
+    int spread = 0;
+    int k = 0;
+    int j = 0;
+    int i = 0;
 
     if ( OppressorNum > 0)
     {
 	EnemyRow = OppressorNum/MaxEnemyScreen;
-	topEnemies = OpressorNum % MaxEnemyScreen;
+	topEnemies = OppressorNum % MaxEnemyScreen;
 	if (topEnemies != 0)
 	{
 	    spread = (playspace-150)/topEnemies;
-	    for( int k = -topEnemies/2; k < topEnemies/2; k++)
+	    for( k = -topEnemies/2; k < topEnemies/2; k++)
 	    {
 		enemytmp = ship_create(SHIP_OPRESSOR, TEAM_EMPIRE, (xres/2)+ (k*spread), epPoint);
 		enemies_list = g_list_prepend(enemies_list, enemytmp); 
@@ -451,11 +455,11 @@ void enemyFormation( int OppressorNum, int InterceptorNum,int BomberNum, int Fig
 	    epPoint = epPoint - 76;
 
 	}
-	for(int j=0; j < EnemyRow; j++)
+	for(j = 0; j < EnemyRow; j++)
 	{
-	    for (int i = -MaxEnemyScreen/2; i < MaxEnemyScreen/2; i++)
+	    for (i = -MaxEnemyScreen/2; i < MaxEnemyScreen/2; i++)
 	    {
-		enemytmp = ship_create(SHIP_OPRESSOR, TEAM_EMPIRE, (xres/2)+(i*76), epPoint);
+		enemytmp = ship_create(SHIP_OPRESSOR, TEAM_EMPIRE, (xres/2)+(i*80), epPoint);
 		enemies_list = g_list_prepend(enemies_list, enemytmp); 
 	    }
 	    epPoint = epPoint - (76);
@@ -471,7 +475,7 @@ void enemyFormation( int OppressorNum, int InterceptorNum,int BomberNum, int Fig
 	if (topEnemies != 0)
 	{
 	    spread = (playspace-150)/topEnemies;
-	    for( int k = -topEnemies/2; k < topEnemies/2; k++)
+	    for(k = -topEnemies/2; k < topEnemies/2; k++)
 	    {
 		enemytmp = ship_create(SHIP_INTERCEPTER, TEAM_EMPIRE, (xres/2)+ (k*spread), epPoint);
 		enemies_list = g_list_prepend(enemies_list, enemytmp); 
@@ -479,11 +483,11 @@ void enemyFormation( int OppressorNum, int InterceptorNum,int BomberNum, int Fig
 	    }
 	    epPoint = epPoint - 76;
 	}
-	for(int j=0; j < EnemyRow; j++)
+	for(j=0; j < EnemyRow; j++)
 	{
-	    for (int i = -MaxEnemyScreen/2; i < MaxEnemyScreen/2; i++)
+	    for (i = -MaxEnemyScreen/2; i < MaxEnemyScreen/2; i++)
 	    {
-		enemytmp = ship_create(SHIP_INTERCEPTER, TEAM_EMPIRE, (xres/2)+(i*76), epPoint);
+		enemytmp = ship_create(SHIP_INTERCEPTER, TEAM_EMPIRE, (xres/2)+(i*80), epPoint);
 		enemies_list = g_list_prepend(enemies_list, enemytmp); 
 	    }
 	    epPoint = epPoint - (76);
@@ -494,11 +498,11 @@ void enemyFormation( int OppressorNum, int InterceptorNum,int BomberNum, int Fig
     if (BomberNum > 0)
     {
 	EnemyRow = BomberNum/MaxEnemyScreen;
-	    topEnemies = BomberNum % MaxEnemyScreen;
+	topEnemies = BomberNum % MaxEnemyScreen;
 	if (topEnemies != 0)
 	{
 	    spread = (playspace-150)/topEnemies;
-	    for( int k = -topEnemies/2; k < topEnemies/2; k++)
+	    for(k = -topEnemies/2; k < topEnemies/2; k++)
 	    {
 		enemytmp = ship_create(SHIP_BOMBER, TEAM_EMPIRE, (xres/2)+ (k*spread), epPoint);
 		enemies_list = g_list_prepend(enemies_list, enemytmp); 
@@ -506,11 +510,11 @@ void enemyFormation( int OppressorNum, int InterceptorNum,int BomberNum, int Fig
 	    }
 	    epPoint = epPoint - 76;
 	}
-	for(int j=0; j < EnemyRow; j++)
+	for(j=0; j < EnemyRow; j++)
 	{
-	    for (int i = -MaxEnemyScreen/2; i < MaxEnemyScreen/2; i++)
+	    for ( i = -MaxEnemyScreen/2; i < MaxEnemyScreen/2; i++)
 	    {
-		enemytmp = ship_create(SHIP_BOMBER, TEAM_EMPIRE, (xres/2)+(i*76), epPoint);
+		enemytmp = ship_create(SHIP_BOMBER, TEAM_EMPIRE, (xres/2)+(i*80), epPoint);
 		enemies_list = g_list_prepend(enemies_list, enemytmp); 
 	    }
 	    epPoint = epPoint - (76);
@@ -521,23 +525,23 @@ void enemyFormation( int OppressorNum, int InterceptorNum,int BomberNum, int Fig
     if ( FighterNum > 0)
     {
 	EnemyRow = FighterNum/MaxEnemyScreen;
-	    topEnemies = FighterNum % MaxEnemyScreen;
+	topEnemies = FighterNum % MaxEnemyScreen;
 	if (topEnemies != 0)
 	{
 	    spread = (playspace-150)/topEnemies;
-	    for( int k = -topEnemies/2; k < topEnemies/2; k++)
+	    for(k = -topEnemies/2; k < topEnemies/2; k++)
 	    {
-		enemytmp = ship_create(SHIP_FIGHTER, TEAM_EMPIRE, (xres/2)+ (k*spread), epPoint);
+		enemytmp = ship_create(SHIP_FIGHTER, TEAM_EMPIRE, (xres/2)+ (k*spread)+(150), epPoint);
 		enemies_list = g_list_prepend(enemies_list, enemytmp); 
 
 	    }
 	    epPoint = epPoint - 76;
 	}
-	for(int j=0; j < EnemyRow; j++)
+	for(j = 0; j < EnemyRow; j++)
 	{
-	    for (int i = -MaxEnemyScreen/2; i < MaxEnemyScreen/2; i++)
+	    for (i = -MaxEnemyScreen/2; i < MaxEnemyScreen/2; i++)
 	    {
-		enemytmp = ship_create(SHIP_FIGHTER, TEAM_EMPIRE, (xres/2)+(i*76), epPoint);
+		enemytmp = ship_create(SHIP_FIGHTER, TEAM_EMPIRE, (xres/2)+(i*80), epPoint);
 		enemies_list = g_list_prepend(enemies_list, enemytmp); 
 	    }
 	    epPoint = epPoint - (76);
@@ -545,8 +549,8 @@ void enemyFormation( int OppressorNum, int InterceptorNum,int BomberNum, int Fig
 
 	}
 
+    }
 }
-
 
 void laser_move_frame(Laser *node) {
 	node->pos[0] += node->vel[0] * timeslice;
@@ -609,7 +613,7 @@ void ship_laser_check_collision(Ship *ship, Laser *laser) {
 void ship_enemy_attack_logic(Ship *ship) {
 	if(!ship->can_attack)
 		return;
-	if(random(10000) < ship->shotfreq)
+	if(random(100000) < ship->shotfreq)
 		laser_fire(ship);
 }
 
@@ -645,6 +649,7 @@ Ship* ship_create(int shiptype, int team, int xpos, int ypos) {
 	ship->shields = statsShields[shiptype][difficulty];
 	ship->damage = statsDamage[shiptype][difficulty];
 	ship->shotfreq = statsShotfreq[shiptype][difficulty];
+	ship->laser_width = statsLaserWidth[shiptype][difficulty];
 	ship->speed = statsSpeed[shiptype][difficulty];
 
 	ship->is_vulnerable = 1;
@@ -694,7 +699,7 @@ void laser_fire(Ship *ship) {
 	node->damage = ship->damage;
 	// Set laser velocity (assuming constant for now)
 	node->vel[0] = 0.0f;
-	node->vel[1] = node->team * 200.0f;
+	node->vel[1] = node->team * 100.0f;
 
 	// Set color info (rgba 0.0->1.0)
 	node->color[0] = node->team == TEAM_EMPIRE ? 1.0 : 0.0;
@@ -702,7 +707,7 @@ void laser_fire(Ship *ship) {
 	node->color[2] = 0.0;
 	node->color[3] = 1.0;
 
-	node->linewidth = 3;
+	node->linewidth = ship->laser_width;
 	node->length = 20;
 
 	// Add to global list of active lasers

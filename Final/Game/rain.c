@@ -558,7 +558,7 @@ void laser_move_frame(Laser *node) {
 }
 
 void ship_move_frame(Ship *ship) {
-	if(!ship->can_move || ship->speed < 1)
+	if(!ship->can_move || ship->speed == 0)
 		return;
 
 	float xdist = ship->dest[0] - ship->pos[0];
@@ -615,6 +615,16 @@ void ship_enemy_attack_logic(Ship *ship) {
 		return;
 	if(random(100000) < ship->shotfreq)
 		laser_fire(ship);
+}
+
+void ship_enemy_move_logic(Ship *ship) {
+	ship->dest[1] = ship->pos[1];
+	if(ship->dest[0] == 0 && ship->pos[0] <= halfpad+ (ship->edge_length/2))
+		ship->dest[0] = xres+100;
+	else if(ship->dest[0] >= xres && ship->pos[0] >= xres-halfpad-(ship->edge_length/2))
+		ship->dest[0] = 0;
+	else if(ship->dest[0] == ship->pos[0])
+		ship->dest[0] = 0;
 }
 
 void laser_check_collision(Laser *laser) {
@@ -737,6 +747,7 @@ void physics(void)
 	if(input_directions & INPUT_DOWN)  player_ship->dest[1] -= 50.0;
 
 	ship_move_frame(player_ship); // Player movement
+	g_list_foreach(enemies_list, (GFunc)ship_enemy_move_logic, NULL); // Determine enemy destinations
 	g_list_foreach(enemies_list, (GFunc)ship_move_frame, NULL); // Enemy movement
 	g_list_foreach(enemies_list, (GFunc)ship_enemy_attack_logic, NULL); // Enemy lasers/etc
 	g_list_foreach(laser_list, (GFunc)laser_move_frame, NULL); // Update laser positions

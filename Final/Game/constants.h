@@ -56,13 +56,13 @@ int statsShotfreq[SHIP_COUNT][DIFFICULTY_COUNT] = {
     {   2,   2,   2},
     {   5,   5,   5}
 };
-int statsSpeed[SHIP_COUNT][DIFFICULTY_COUNT] = {
-    {  10,  15,  25},
-    {   5,  10,  15},
-    {  15,  25,  40},
-    {   5,  10,  15},
-    {   2,   2,   2},
-    {   5,   5,   5}
+float statsSpeed[SHIP_COUNT][DIFFICULTY_COUNT] = {
+    {   0.5,  1.0,  1.5},
+    {   1.0,  2.0,  3.0},
+    {   1.0,  2.0,  3.0},
+    {   0.5,  1.0,  1.5},
+    {   2.5,  2.5,  2.5},
+    {   1.5,  1.5,  1.5}
 };
 
 int statsScore[SHIP_COUNT][DIFFICULTY_COUNT] = {

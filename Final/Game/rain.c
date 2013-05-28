@@ -38,6 +38,7 @@ int InitGL(GLvoid);
 void checkkey(int k1, int k2);
 void physics(void);
 void render(void);
+void enemyFormation(int, int, int, int);// takes # of each enemies we want,
 extern GLuint loadBMP(const char *imagepath);
 extern GLuint tex_readgl_bmp(char *fileName, int alpha_channel);
 
@@ -77,6 +78,7 @@ typedef struct t_ship {
 GList *laser_list = NULL;
 GList *enemies_list = NULL;
 Ship *player_ship = NULL;
+Ship *enemytmp = NULL;
 GLuint ship_textures[SHIP_COUNT];
 GLuint background_texture;
 
@@ -112,13 +114,14 @@ int main(int argc, char **argv)
 	//TODO: On menu, when player selects play, present ship selection 
 	//screen.  Ship choice sets ship_select variable.
 
-	Ship *enemytmp = NULL;
-	enemytmp = ship_create(SHIP_FIGHTER, TEAM_EMPIRE, xres/4, 5*yres/6);
-	enemies_list = g_list_prepend(enemies_list, enemytmp);
+	//enemytmp = ship_create(SHIP_FIGHTER, TEAM_EMPIRE, xres/4, 5*yres/6);
+	//enemies_list = g_list_prepend(enemies_list, enemytmp);
 	//enemytmp = ship_create(SHIP_BOMBER, TEAM_EMPIRE, 2*xres/4, 3*yres/6);
 	//enemies_list = g_list_prepend(enemies_list, enemytmp);
-	enemytmp = ship_create(SHIP_OPRESSOR, TEAM_EMPIRE, 3*xres/4, 5*yres/6);
-	enemies_list = g_list_prepend(enemies_list, enemytmp);
+	//enemytmp = ship_create(SHIP_OPRESSOR, TEAM_EMPIRE, 3*xres/4, 5*yres/6);
+	//enemies_list = g_list_prepend(enemies_list, enemytmp);
+	
+	enemyFormation(8, 8, 8, 8); // takes # of each enemies we want,
 
 
 	Log("setting window to: %i x %i\n",xres,yres);
@@ -424,6 +427,128 @@ void laser_render(Laser *node) {
 	glEnd();
 	glPopMatrix();
 }
+
+void enemyFormation( int OppressorNum, int InterceptorNum,int BomberNum, int FighterNum)
+{
+    int playspace = xres-pad;
+    int MaxEnemyScreen = (playspace/76 )-2;
+    int epPoint = yres - 100;
+    int EnemyRow = 0;
+    int topEnemies = 0;
+    int spread = 0;;
+
+    if ( OppressorNum > 0)
+    {
+	EnemyRow = OppressorNum/MaxEnemyScreen;
+	topEnemies = OpressorNum % MaxEnemyScreen;
+	if (topEnemies != 0)
+	{
+	    spread = (playspace-150)/topEnemies;
+	    for( int k = -topEnemies/2; k < topEnemies/2; k++)
+	    {
+		enemytmp = ship_create(SHIP_OPRESSOR, TEAM_EMPIRE, (xres/2)+ (k*spread), epPoint);
+		enemies_list = g_list_prepend(enemies_list, enemytmp); 
+
+	    }
+	    epPoint = epPoint - 76;
+
+	}
+	for(int j=0; j < EnemyRow; j++)
+	{
+	    for (int i = -MaxEnemyScreen/2; i < MaxEnemyScreen/2; i++)
+	    {
+		enemytmp = ship_create(SHIP_OPRESSOR, TEAM_EMPIRE, (xres/2)+(i*76), epPoint);
+		enemies_list = g_list_prepend(enemies_list, enemytmp); 
+	    }
+	    epPoint = epPoint - (76);
+
+
+	}
+    }
+
+    if ( InterceptorNum > 0)
+    {
+	EnemyRow = InterceptorNum/MaxEnemyScreen;
+	topEnemies = InterceptorNum % MaxEnemyScreen;
+	if (topEnemies != 0)
+	{
+	    spread = (playspace-150)/topEnemies;
+	    for( int k = -topEnemies/2; k < topEnemies/2; k++)
+	    {
+		enemytmp = ship_create(SHIP_INTERCEPTER, TEAM_EMPIRE, (xres/2)+ (k*spread), epPoint);
+		enemies_list = g_list_prepend(enemies_list, enemytmp); 
+
+	    }
+	    epPoint = epPoint - 76;
+	}
+	for(int j=0; j < EnemyRow; j++)
+	{
+	    for (int i = -MaxEnemyScreen/2; i < MaxEnemyScreen/2; i++)
+	    {
+		enemytmp = ship_create(SHIP_INTERCEPTER, TEAM_EMPIRE, (xres/2)+(i*76), epPoint);
+		enemies_list = g_list_prepend(enemies_list, enemytmp); 
+	    }
+	    epPoint = epPoint - (76);
+
+
+	}
+    }
+    if (BomberNum > 0)
+    {
+	EnemyRow = BomberNum/MaxEnemyScreen;
+	    topEnemies = BomberNum % MaxEnemyScreen;
+	if (topEnemies != 0)
+	{
+	    spread = (playspace-150)/topEnemies;
+	    for( int k = -topEnemies/2; k < topEnemies/2; k++)
+	    {
+		enemytmp = ship_create(SHIP_BOMBER, TEAM_EMPIRE, (xres/2)+ (k*spread), epPoint);
+		enemies_list = g_list_prepend(enemies_list, enemytmp); 
+
+	    }
+	    epPoint = epPoint - 76;
+	}
+	for(int j=0; j < EnemyRow; j++)
+	{
+	    for (int i = -MaxEnemyScreen/2; i < MaxEnemyScreen/2; i++)
+	    {
+		enemytmp = ship_create(SHIP_BOMBER, TEAM_EMPIRE, (xres/2)+(i*76), epPoint);
+		enemies_list = g_list_prepend(enemies_list, enemytmp); 
+	    }
+	    epPoint = epPoint - (76);
+
+
+	}
+    }
+    if ( FighterNum > 0)
+    {
+	EnemyRow = FighterNum/MaxEnemyScreen;
+	    topEnemies = FighterNum % MaxEnemyScreen;
+	if (topEnemies != 0)
+	{
+	    spread = (playspace-150)/topEnemies;
+	    for( int k = -topEnemies/2; k < topEnemies/2; k++)
+	    {
+		enemytmp = ship_create(SHIP_FIGHTER, TEAM_EMPIRE, (xres/2)+ (k*spread), epPoint);
+		enemies_list = g_list_prepend(enemies_list, enemytmp); 
+
+	    }
+	    epPoint = epPoint - 76;
+	}
+	for(int j=0; j < EnemyRow; j++)
+	{
+	    for (int i = -MaxEnemyScreen/2; i < MaxEnemyScreen/2; i++)
+	    {
+		enemytmp = ship_create(SHIP_FIGHTER, TEAM_EMPIRE, (xres/2)+(i*76), epPoint);
+		enemies_list = g_list_prepend(enemies_list, enemytmp); 
+	    }
+	    epPoint = epPoint - (76);
+
+
+	}
+
+}
+
 
 void laser_move_frame(Laser *node) {
 	node->pos[0] += node->vel[0] * timeslice;

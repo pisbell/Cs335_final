@@ -179,16 +179,13 @@ void checkkey(int k1, int k2)
 		// Set the flag for the given arrow key if pressed
 		if(k1 == GLFW_KEY_LEFT) input_directions |= INPUT_LEFT;
 		if(k1 == GLFW_KEY_RIGHT) input_directions |= INPUT_RIGHT;
+		if(k1 == ' ') input_directions |= INPUT_FIRE;
 	} else if (k2 == GLFW_RELEASE) {
 		// Unset the flag for the given arrow key if released
 		if(k1 == GLFW_KEY_LEFT) input_directions &= ~INPUT_LEFT;
 		if(k1 == GLFW_KEY_RIGHT) input_directions &= ~INPUT_RIGHT;
+		if(k1 == ' ') input_directions &= ~INPUT_FIRE;
 		//don't process any other keys on a release
-		return;
-	}
-
-	if (k1 == ' ' && player_ship->can_attack) {
-		laser_fire(player_ship, NULL);
 		return;
 	}
 
@@ -759,6 +756,8 @@ double VecNormalize(Vec vec) {
 
 void laser_fire(Ship *ship, Ship *homing_target) {
 	// Creates and fires laser from the given ship
+	if(!ship->can_attack)
+		return;
 
 	Laser *node = (Laser *)malloc(sizeof(Laser));
 	if (node == NULL) {
@@ -815,6 +814,9 @@ void physics(void)
 	}
 	if(input_directions & INPUT_UP)    player_ship->dest[1] += 50.0;
 	if(input_directions & INPUT_DOWN)  player_ship->dest[1] -= 50.0;
+
+	if(input_directions & INPUT_FIRE && random(200) < player_ship->shotfreq)
+		laser_fire(player_ship, NULL);
 
 	ship_move_frame(player_ship); // Player movement
 	g_list_foreach(enemies_list, (GFunc)ship_enemy_move_logic, NULL); // Determine enemy destinations

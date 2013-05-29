@@ -3,10 +3,11 @@
 #define TEAM_REBELS 1
 
 // Bitmask values for arrow key inputs.
-#define INPUT_UP 0x1
-#define INPUT_DOWN 0x2
-#define INPUT_LEFT 0x4
-#define INPUT_RIGHT 0x8
+#define INPUT_UP 1
+#define INPUT_DOWN 2
+#define INPUT_LEFT 4
+#define INPUT_RIGHT 8
+#define INPUT_FIRE 16
 
 // Indexes/IDs for ship types.
 #define SHIP_FIGHTER     0
@@ -53,8 +54,8 @@ int statsShotfreq[SHIP_COUNT][DIFFICULTY_COUNT] = {
     {   5,  15,  25},
     { 100,  70,  95},
     {   5,  10,  15},
-    {   2,   2,   2},
-    {   5,   5,   5}
+    {   5,   5,   5},
+    {   7,   7,   7}
 };
 float statsSpeed[SHIP_COUNT][DIFFICULTY_COUNT] = {
     { 0.75,  1.0,  1.5},

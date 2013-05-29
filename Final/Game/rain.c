@@ -44,16 +44,6 @@ const float timeslice = 1.0f/60.0f;
 int time_control = 5;
 int input_directions = 0; //bitmask of arrow keys currently down, see INPUT_* macros
 
-typedef struct t_laser {
-	int team;
-	int damage;
-	int linewidth;
-	Vec pos;
-	Vec vel;
-	float length;
-	float color[4];
-} Laser;
-
 typedef struct t_ship {
 	int team; 	     // TEAM_REBELS or TEAM_EMPIRE
 	int shiptype;
@@ -74,6 +64,17 @@ typedef struct t_ship {
 	float hitbox_radius; // Radius of circular hitbox
 } Ship;
 
+typedef struct t_laser {
+	int team;
+	int damage;
+	int linewidth;
+	Vec pos;
+	Vec vel;
+	float length;
+	float color[4];
+	Ship* homing_target;
+} Laser;
+
 
 GList *laser_list = NULL;
 GList *enemies_list = NULL;
@@ -88,7 +89,7 @@ Ship* ship_create(int shiptype, int team, int xpos, int ypos);
 void laser_move_frame(Laser *node);
 void laser_check_collision(Laser *node);
 void laser_render(Laser *node);
-void laser_fire(Ship *ship);
+void laser_fire(Ship *ship, Ship *homing_target);
 
 double shottimer     = 0;
 int show_lasers      = 1;
@@ -187,7 +188,7 @@ void checkkey(int k1, int k2)
 	}
 
 	if (k1 == ' ' && player_ship->can_attack) {
-		laser_fire(player_ship);
+		laser_fire(player_ship, NULL);
 		return;
 	}
 
@@ -563,6 +564,23 @@ void enemyFormation( int OppressorNum, int InterceptorNum,int BomberNum, int Fig
 }
 
 void laser_move_frame(Laser *node) {
+	if(node->homing_target != NULL) {
+		float total_vel = sqrtf(node->vel[0]*node->vel[0] + node->vel[1]*node->vel[1]);
+		float dx = node->homing_target->pos[0] - node->pos[0];
+		float dy = node->homing_target->pos[1] - node->pos[1];
+		float scale = total_vel/sqrtf(dx*dx + dy*dy);
+
+		if((dy > 0 && node->team == TEAM_REBELS) || (dy < 0 && node->team == TEAM_EMPIRE)) {
+			node->vel[0] = scale * dx;
+			node->vel[1] = scale * dy;
+
+			if(fabs(node->vel[1]) < fabs(node->vel[0])) {
+				node->vel[0] = sqrtf(total_vel*total_vel/2) * (dx > 0 ? 1 : -1);
+				node->vel[1] = sqrtf(total_vel*total_vel/2) * node->team;
+			}
+		}
+	}
+
 	node->pos[0] += node->vel[0] * timeslice;
 	node->pos[1] += node->vel[1] * timeslice;
 }
@@ -640,12 +658,12 @@ void ship_enemy_attack_logic(Ship *ship) {
 
 	if(ship->shiptype == SHIP_BOMBER) {
 		if(abs(ship->pos[0] - player_ship->pos[0]) <= 100 && random(1000) < ship->shotfreq)
-			laser_fire(ship);
+			laser_fire(ship, NULL);
 		return;
 	}
 
 	if(random(100000) < ship->shotfreq)
-		laser_fire(ship);
+		laser_fire(ship, player_ship);
 }
 
 void ship_enemy_move_logic(Ship *ship) {
@@ -739,7 +757,7 @@ double VecNormalize(Vec vec) {
 	return(len);
 }
 
-void laser_fire(Ship *ship) {
+void laser_fire(Ship *ship, Ship *homing_target) {
 	// Creates and fires laser from the given ship
 
 	Laser *node = (Laser *)malloc(sizeof(Laser));
@@ -764,6 +782,13 @@ void laser_fire(Ship *ship) {
 
 	node->linewidth = ship->laser_width;
 	node->length = 20;
+
+	if(homing_target != NULL) {
+		// Set color info (rgba 0.0->1.0)
+		node->color[0] = node->color[1] = 0.0;
+		node->color[2] = node->color[3] = 1.0;
+	}
+	node->homing_target = homing_target;
 
 	// Add to global list of active lasers
 	laser_list = g_list_prepend(laser_list, node);

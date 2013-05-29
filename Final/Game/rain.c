@@ -62,6 +62,7 @@ typedef struct t_ship {
 	int damage;
 	int shotfreq;
 	int laser_width;
+	int score;
 	int is_vulnerable;   // Is ship vulnerable to hostile fire?
 	int is_visible;      // Are we drawing the ship?
 	int can_attack;      // Can the ship fire?
@@ -93,6 +94,7 @@ double shottimer     = 0;
 int show_lasers      = 1;
 int show_text        = 1;
 int difficulty = DIFFICULTY_EASY;
+int player_score     = 0;
 
 
 int main(int argc, char **argv)
@@ -254,6 +256,12 @@ void checkkey(int k1, int k2)
 			player_ship->team = TEAM_REBELS;
 		return;
 	}
+	if (k1 == '='){
+	    if (enemies_list == NULL)
+	    {
+		enemyFormation(5, 10, 15, 20);
+	    }
+	}
 }
 
 int InitGL(GLvoid)
@@ -344,6 +352,7 @@ void render(GLvoid)
 		ggprint16(&r, 16, 0x00aaaa00, "<-> Cycle teams: %s",player_ship->team==TEAM_REBELS?"Rebels":"Empire");
 		ggprint16(&r, 16, 0x00aaaa00, "    Player health: %d",player_ship->health);
 		ggprint16(&r, 16, 0x00aaaa00, "    Player Shields: %d",player_ship->shields);
+		ggprint16(&r, 16, 0x00aaaa00, "    Player Score:  %d", player_score);
 	}
 }
 
@@ -613,6 +622,7 @@ void ship_laser_check_collision(Ship *ship, Laser **dplaser) {
 
 			if (ship->health <= 0) {
 				ship_destroy(ship);
+				player_score += ship->score;
 			}
 			
 			laser_list = g_list_remove(laser_list, laser);
@@ -641,7 +651,12 @@ void ship_enemy_move_logic(Ship *ship) {
 	ship->dest[1] = ship->pos[1];
 
 	if(ship->shiptype == SHIP_OPRESSOR) {
-		ship->dest[0] = player_ship->pos[0];
+	    	if(abs(ship->pos[0] - ship->dest[0]) < 5)
+		    ship->dest[0] = random(500) + player_ship->pos[0]-250;
+		if (ship->dest[0] < halfpad)
+		    ship->dest[0] = halfpad + ship->edge_length/2;
+		if (ship->dest[0] > xres - halfpad)
+		    ship->dest[0] = xres - halfpad - ship->edge_length/2;
 		return;
 	}
 
@@ -689,6 +704,7 @@ Ship* ship_create(int shiptype, int team, int xpos, int ypos) {
 	ship->shotfreq = statsShotfreq[shiptype][difficulty];
 	ship->laser_width = statsLaserWidth[shiptype][difficulty];
 	ship->speed = statsSpeed[shiptype][difficulty];
+	ship->score = statsScore[shiptype][difficulty];
 
 	ship->is_vulnerable = 1;
 	ship->is_visible = 1;

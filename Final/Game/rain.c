@@ -429,9 +429,10 @@ void laser_render(Laser *node) {
 	glTranslated(node->pos[0],node->pos[1],node->pos[2]);
 	glColor4fv(node->color);
 	glLineWidth(node->linewidth);
+	float scale = sqrtf(node->vel[0] * node->vel[0] + node->vel[1] * node->vel[1]) / node->length;
 	glBegin(GL_LINES);
 		glVertex2f(0.0f, 0.0f);
-		glVertex2f(0.0f, node->length);
+		glVertex2f(node->vel[0]/scale, node->vel[1]/scale);
 	glEnd();
 	glPopMatrix();
 }

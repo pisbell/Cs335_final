@@ -9,6 +9,8 @@
 #define INPUT_RIGHT 8
 #define INPUT_FIRE 16
 
+#define EXPLOSION_IMAGES 25
+
 // Indexes/IDs for ship types.
 #define SHIP_FIGHTER     0
 #define SHIP_BOMBER      1

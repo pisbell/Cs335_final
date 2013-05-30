@@ -62,6 +62,7 @@ typedef struct t_ship {
 	float speed; 	     // Speed ship will move at (not current speed, and there is no acceleration)
 	float edge_length;   // Edge size of square texture
 	float hitbox_radius; // Radius of circular hitbox
+	int death_animation; // Progress of explosion, -1 disables
 } Ship;
 
 typedef struct t_laser {
@@ -82,6 +83,7 @@ Ship *player_ship = NULL;
 Ship *enemytmp = NULL;
 GLuint ship_textures[SHIP_COUNT];
 GLuint background_texture;
+GLuint explosion_textures[EXPLOSION_IMAGES];
 
 void ship_render(Ship *ship);
 Ship* ship_create(int shiptype, int team, int xpos, int ypos);
@@ -277,6 +279,13 @@ int InitGL(GLvoid)
     ship_textures[SHIP_OPRESSOR] = tex_readgl_bmp("Oppressor.bmp", 1.0);
     ship_textures[SHIP_AWING] = tex_readgl_bmp("AWing.bmp", 1.0);
     ship_textures[SHIP_XWING] = tex_readgl_bmp("XWing.bmp", 1.0);
+
+	int i;
+	char filename[20];
+	for(i = 1; i <= EXPLOSION_IMAGES; i++) {
+		sprintf(filename, "explosions/%d.bmp", i);
+		explosion_textures[i-1] = tex_readgl_bmp(filename, 1.0);
+	}
 	return 1;
 }
 
@@ -386,37 +395,68 @@ void ship_render(Ship *ship)
 	if(!ship->is_visible)
 		return;
 
-	glColor4f(1.0f, 1.0f, 1.0f, 0.8f);
-	glPushMatrix();
-	glTranslatef(ship->pos[0], ship->pos[1], ship->pos[2]);
-	glEnable(GL_ALPHA_TEST);
-	glAlphaFunc(GL_GREATER, 0.0f);
-	glBindTexture(GL_TEXTURE_2D, ship_textures[ship->shiptype]);
-	glBegin(GL_QUADS);
-		float w = ship->edge_length * 0.5;
-		glTexCoord2f(0.0f, 0.0f); glVertex2f(-w, -w);
-		glTexCoord2f(1.0f, 0.0f); glVertex2f( w, -w);
-		glTexCoord2f(1.0f, 1.0f); glVertex2f( w,  w);
-		glTexCoord2f(0.0f, 1.0f); glVertex2f(-w,  w);
-	glEnd();
-	glBindTexture(GL_TEXTURE_2D, 0);
-	glDisable(GL_ALPHA_TEST);
-
-	if(ship->shields > 0) {
-		glEnable(GL_BLEND);
-		glBegin(GL_TRIANGLE_FAN);
-			float *colors = ship_calculate_shield_color(ship);
-			glColor4f(colors[0], colors[1], colors[2], colors[3]);
-			free(colors);
-			glVertex2f(0, 0);
-
-			int slices = 16;
-			float slice_size = 2 * 3.1415926535 / slices;
-			for(circle_i=0; circle_i<=slices; circle_i++) {
-				glVertex2f(w*cosf(circle_i*slice_size), w*sinf(circle_i*slice_size));
-			}
+	if(ship->death_animation == -1) {
+		// Normal render
+		glColor4f(1.0f, 1.0f, 1.0f, 0.8f);
+		glPushMatrix();
+		glTranslatef(ship->pos[0], ship->pos[1], ship->pos[2]);
+		glEnable(GL_ALPHA_TEST);
+		glAlphaFunc(GL_GREATER, 0.0f);
+		glBindTexture(GL_TEXTURE_2D, ship_textures[ship->shiptype]);
+		glBegin(GL_QUADS);
+			float w = ship->edge_length * 0.5;
+			glTexCoord2f(0.0f, 0.0f); glVertex2f(-w, -w);
+			glTexCoord2f(1.0f, 0.0f); glVertex2f( w, -w);
+			glTexCoord2f(1.0f, 1.0f); glVertex2f( w,  w);
+			glTexCoord2f(0.0f, 1.0f); glVertex2f(-w,  w);
 		glEnd();
-		glDisable(GL_BLEND);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		glDisable(GL_ALPHA_TEST);
+
+		if(ship->shields > 0) {
+			glEnable(GL_BLEND);
+			glBegin(GL_TRIANGLE_FAN);
+				float *colors = ship_calculate_shield_color(ship);
+				glColor4f(colors[0], colors[1], colors[2], colors[3]);
+				free(colors);
+				glVertex2f(0, 0);
+
+				int slices = 16;
+				float slice_size = 2 * 3.1415926535 / slices;
+				for(circle_i=0; circle_i<=slices; circle_i++) {
+					glVertex2f(w*cosf(circle_i*slice_size), w*sinf(circle_i*slice_size));
+				}
+			glEnd();
+			glDisable(GL_BLEND);
+		}
+	} else if(ship->death_animation < EXPLOSION_IMAGES*2) {
+		// Render ship explosion (2 frames per image)
+		glColor4f(1.0f, 1.0f, 1.0f, 0.8f);
+		glPushMatrix();
+		glTranslatef(ship->pos[0], ship->pos[1], ship->pos[2]);
+		glEnable(GL_ALPHA_TEST);
+		glAlphaFunc(GL_GREATER, 0.0f);
+		glBindTexture(GL_TEXTURE_2D, explosion_textures[ship->death_animation/2]);
+		glBegin(GL_QUADS);
+			float w = ship->edge_length * 0.5;
+			glTexCoord2f(0.0f, 0.0f); glVertex2f(-w, -w);
+			glTexCoord2f(1.0f, 0.0f); glVertex2f( w, -w);
+			glTexCoord2f(1.0f, 1.0f); glVertex2f( w,  w);
+			glTexCoord2f(0.0f, 1.0f); glVertex2f(-w,  w);
+		glEnd();
+		glBindTexture(GL_TEXTURE_2D, 0);
+		glDisable(GL_ALPHA_TEST);
+		ship->death_animation++;
+	} else {
+		// Explosion complete, destroy ship
+		if(ship == player_ship) {
+			// Actually free()ing ship segfaults the app, just leave it dormant
+			//TODO: Game over/respawn (we need lives)
+		} else {
+			enemies_list = g_list_remove(enemies_list, ship);
+			free(ship);
+			//TODO: If no more enemies, bump difficulty and spawn enemies (victory screen after DIFFICULTY_HARD?)
+		}
 	}
 
 	glPopMatrix();
@@ -598,17 +638,12 @@ void ship_move_frame(Ship *ship) {
 	ship->pos[1] += ydist*scale;
 }
 
-void ship_destroy(Ship *ship) {
-	if(ship == player_ship) {
-		// Actually free()ing ship segfaults the app, just make it dormant.
-		player_ship->is_vulnerable = 0;
-		player_ship->is_visible = 0;
-		player_ship->can_attack = 0;
-		player_ship->can_move = 0;
-	} else {
-		enemies_list = g_list_remove(enemies_list, ship);
-		free(ship);
-	}
+void ship_explode(Ship *ship) {
+	ship->is_vulnerable = 0;
+	ship->is_visible = 1;
+	ship->can_attack = 0;
+	ship->can_move = 0;
+	ship->death_animation = 0; // Begins death animation
 }
 
 void ship_laser_check_collision(Ship *ship, Laser **dplaser) {
@@ -637,7 +672,7 @@ void ship_laser_check_collision(Ship *ship, Laser **dplaser) {
 				ship->health -= laser->damage;
 
 			if (ship->health <= 0) {
-				ship_destroy(ship);
+				ship_explode(ship);
 				player_score += ship->score;
 			}
 			
@@ -726,6 +761,7 @@ Ship* ship_create(int shiptype, int team, int xpos, int ypos) {
 	ship->is_visible = 1;
 	ship->can_attack = 1;
 	ship->can_move = 1;
+	ship->death_animation = -1;
 
 	ship->pos[0] = ship->dest[0] = xpos;
 	ship->pos[1] = ship->dest[1] = ypos;

@@ -105,7 +105,7 @@ void laser_fire(Ship *ship, Ship *homing_target);
 double shottimer     = 0;
 int show_lasers      = 1;
 int show_text        = 1;
-int difficulty = DIFFICULTY_EASY;
+int difficulty       = DIFFICULTY_EASY;
 int player_score     = 0;
 int ship_select      = SHIP_XWING; // For player to choose ship
 int ship_selected    = 0; // 0 while ship is being selected
@@ -713,14 +713,18 @@ void ship_enemy_attack_logic(Ship *ship) {
 	if(!ship->can_attack)
 		return;
 
-	if(ship->shiptype == SHIP_BOMBER) {
+	if(ship->shiptype == SHIP_BOMBER && difficulty >= DIFFICULTY_MEDIUM) {
 		if(abs(ship->pos[0] - player_ship->pos[0]) <= 100 && random(1000) < ship->shotfreq)
 			laser_fire(ship, NULL);
 		return;
 	}
 
-	if(random(100000) < ship->shotfreq)
-		laser_fire(ship, player_ship);
+	if(random(100000) < ship->shotfreq) {
+		if(ship->shiptype == SHIP_INTERCEPTER && difficulty >= DIFFICULTY_HARD)
+			laser_fire(ship, player_ship);
+		else
+			laser_fire(ship, NULL);
+	}
 }
 
 void ship_enemy_move_logic(Ship *ship) {

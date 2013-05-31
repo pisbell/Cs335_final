@@ -10,7 +10,6 @@
 #include <time.h>
 #include <glib.h>
 #include <GL/glfw.h>
-#include <mysql.h>
 
 #include "constants.h"
 #include "defs.h"
@@ -18,6 +17,7 @@
 //These components can be turned on and off
 #define USE_FONTS
 #define USE_LOG
+//#define USE_DB
 
 #ifdef USE_LOG
 #include "log.h"
@@ -27,12 +27,18 @@
 #include "fonts.h"
 #endif //USE_FONTS
 
+#ifdef USE_DB
+#include <mysql.h>
+#endif //USE_DB
+
 //macros
 #define rnd() (((double)rand())/(double)RAND_MAX)
 #define random(a) (rand()%a)
 
 //prototypes
+#ifdef USE_DB
 MYSQL* connect();
+#endif //USE_DB
 int InitGL(GLvoid);
 void checkkey(int k1, int k2);
 void physics(void);
@@ -107,7 +113,9 @@ int ship_selected    = 0; // 0 while ship is being selected
 
 int main(int argc, char **argv)
 {
-    	MYSQL* conn = connect();
+#ifdef USE_DB	
+	MYSQL* conn = connect();
+#endif //USE_DB
 	int i, nmodes;
 	GLFWvidmode glist[256];
 	open_log_file();
@@ -258,6 +266,7 @@ void checkkey(int k1, int k2)
 	}
 }
 
+#ifdef USE_DB
 MYSQL* connect()
 {
        MYSQL *conn;
@@ -275,6 +284,7 @@ MYSQL* connect()
 	  exit(1);
       }
 }
+#endif //USE_DB
 
 int InitGL(GLvoid)
 {

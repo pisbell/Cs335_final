@@ -1,6 +1,6 @@
 // CS 335 - Spring 2013 Final
-// Program: STAR WARS Galaga
-// Authors: Jacob Courtney, Patrick Isbell, Terry McIrvin
+// Program; STAR WARS Galaga
+// Authors; Jacob Courtney, Patrick Isbell, Terry McIrvin
 // Based on code by Gordon Griesel
 
 #include <stdio.h>
@@ -82,13 +82,8 @@ GList *enemies_list = NULL;
 GList *turret_list  = NULL;
 Ship *player_ship   = NULL;
 Ship *enemytmp      = NULL;
-Ship *target1       = NULL;
-Ship *target2       = NULL;
-Ship *target3       = NULL;
-Ship *target4       = NULL;
-Ship *target5       = NULL;
-Ship *target6       = NULL;
-Ship *target7       = NULL;
+Ship *targets[8]    = {NULL, NULL, NULL,NULL,NULL,NULL,NULL, NULL};
+Ship *turrets[7]    = {NULL, NULL, NULL,NULL,NULL,NULL,NULL};
 GLuint ship_textures[SHIP_COUNT];
 GLuint background_texture;
 GLuint explosion_textures[EXPLOSION_IMAGES];
@@ -101,14 +96,17 @@ void laser_check_collision(Laser *node);
 void laser_render(Laser *node);
 void laser_fire(Ship *ship, Ship *homing_target);
 void deathStar_fire();
-void deathStar_charge();
+void deathStar_charge_on();
+void deathStar_charge_off();
 
 double shottimer     = 0;
 int show_lasers      = 1;
 int show_text        = 1;
 int difficulty = DIFFICULTY_EASY;
 int player_score     = 0;
-
+int charging         = -1000;
+int cannon           = 0;
+int indexes          = 0;
 
 int main(int argc, char **argv)
 {
@@ -123,22 +121,16 @@ int main(int argc, char **argv)
 	nmodes = glfwGetVideoModes(glist, 100);
 	xres = glist[nmodes-1].Width;
 	yres = glist[nmodes-1].Height;
-	player_ship = ship_create(ship_select, TEAM_REBELS, xres/4, 100.0); 
+	player_ship = ship_create(ship_select, TEAM_REBELS, xres/2, 100.0); 
 	
-	//TODO: On menu, when player selects play, present ship selection 
+	//TODO; On menu, when player selects play, present ship selection 
 	//screen.  Ship choice sets ship_select variable.
 
-	//enemytmp = ship_create(SHIP_FIGHTER, TEAM_EMPIRE, xres/4, 5*yres/6);
-	//enemies_list = g_list_prepend(enemies_list, enemytmp);
-	//enemytmp = ship_create(SHIP_BOMBER, TEAM_EMPIRE, 2*xres/4, 3*yres/6);
-	//enemies_list = g_list_prepend(enemies_list, enemytmp);
-	//enemytmp = ship_create(SHIP_OPRESSOR, TEAM_EMPIRE, 3*xres/4, 5*yres/6);
-	//enemies_list = g_list_prepend(enemies_list, enemytmp);
 	
-	enemyFormation( 6, 10, 15, 20); // takes # of each enemies we want,
-	//deathStar_fire();
+	enemyFormation( 5, 6, 10, 15); // takes # of each enemies we want,
+	//deathStar_charge_on();
 
-	Log("setting window to: %i x %i\n",xres,yres);
+	Log("setting window to; %i x %i\n",xres,yres);
 	//if (!glfwOpenWindow(xres, yres, 0, 0, 0, 0, 0, 0, GLFW_WINDOW)) {
 	if (!glfwOpenWindow(xres,yres,8,8,8,0,32,0,GLFW_FULLSCREEN)) {
 		close_log_file();
@@ -296,6 +288,13 @@ int InitGL(GLvoid)
 		sprintf(filename, "explosions/%d.bmp", i);
 		explosion_textures[i-1] = tex_readgl_bmp(filename, 1.0);
 	}
+
+    	i =0;
+    	for (i ; i < 7 ; i++)
+    	{
+		turrets[i] = ship_create(SHIP_TURRET, TEAM_EMPIRE, (xres/4)+ (i*10)+45, yres - (abs(4-i)*5)-10);
+    	}
+
 	return 1;
 }
 
@@ -359,17 +358,17 @@ void render(GLvoid)
 		ggprint16(&r, 16, 0x00aa00aa, "<1> Speedup game", NULL);
 		ggprint16(&r, 16, 0x0000aaaa, "<2> Shrink ship", NULL);
 		ggprint16(&r, 16, 0x0000aaaa, "<3> Grow ship", NULL);
-		ggprint16(&r, 16, 0x00aaaa00, "<4> Render lasers: %s",show_lasers==1?"On":"Off");
-		ggprint16(&r, 16, 0x00aaaa00, "<5> Render text: %s",show_text==1?"On":"Off");
-		ggprint16(&r, 16, 0x00aaaa00, "<6> Render ship: %s",player_ship->is_visible==1?"On":"Off");
-		ggprint16(&r, 16, 0x00aaaa00, "<7> Enable vulnerablility: %s",player_ship->is_vulnerable==1?"On":"Off");
-		ggprint16(&r, 16, 0x00aaaa00, "<8> Enable attack: %s",player_ship->can_attack==1?"On":"Off");
-		ggprint16(&r, 16, 0x00aaaa00, "<9> Enable movement: %s",player_ship->can_move==1?"On":"Off");
-		ggprint16(&r, 16, 0x00aaaa00, "<0> Cycle ships: %d",player_ship->shiptype);
-		ggprint16(&r, 16, 0x00aaaa00, "<-> Cycle teams: %s",player_ship->team==TEAM_REBELS?"Rebels":"Empire");
-		ggprint16(&r, 16, 0x00aaaa00, "    Player health: %d",player_ship->health);
-		ggprint16(&r, 16, 0x00aaaa00, "    Player Shields: %d",player_ship->shields);
-		ggprint16(&r, 16, 0x00aaaa00, "    Player Score:  %d", player_score);
+		ggprint16(&r, 16, 0x00aaaa00, "<4> Render lasers; %s",show_lasers==1?"On":"Off");
+		ggprint16(&r, 16, 0x00aaaa00, "<5> Render text; %s",show_text==1?"On":"Off");
+		ggprint16(&r, 16, 0x00aaaa00, "<6> Render ship; %s",player_ship->is_visible==1?"On":"Off");
+		ggprint16(&r, 16, 0x00aaaa00, "<7> Enable vulnerablility; %s",player_ship->is_vulnerable==1?"On":"Off");
+		ggprint16(&r, 16, 0x00aaaa00, "<8> Enable attack; %s",player_ship->can_attack==1?"On":"Off");
+		ggprint16(&r, 16, 0x00aaaa00, "<9> Enable movement; %s",player_ship->can_move==1?"On":"Off");
+		ggprint16(&r, 16, 0x00aaaa00, "<0> Cycle ships; %d",player_ship->shiptype);
+		ggprint16(&r, 16, 0x00aaaa00, "<-> Cycle teams; %s",player_ship->team==TEAM_REBELS?"Rebels":"Empire");
+		ggprint16(&r, 16, 0x00aaaa00, "    Player health; %d",player_ship->health);
+		ggprint16(&r, 16, 0x00aaaa00, "    Player Shields; %d",player_ship->shields);
+		ggprint16(&r, 16, 0x00aaaa00, "    Player Score;  %d", player_score);
 	}
 }
 
@@ -461,11 +460,11 @@ void ship_render(Ship *ship)
 		// Explosion complete, destroy ship
 		if(ship == player_ship) {
 			// Actually free()ing ship segfaults the app, just leave it dormant
-			//TODO: Game over/respawn (we need lives)
+			//TODO; Game over/respawn (we need lives)
 		} else {
 			enemies_list = g_list_remove(enemies_list, ship);
 			free(ship);
-			//TODO: If no more enemies, bump difficulty and spawn enemies (victory screen after DIFFICULTY_HARD?)
+			//TODO; If no more enemies, bump difficulty and spawn enemies (victory screen after DIFFICULTY_HARD?)
 		}
 	}
 
@@ -622,8 +621,7 @@ void laser_move_frame(Laser *node) {
 			node->vel[1] = scale * dy;
 
 			if(fabs(node->vel[1]) < fabs(node->vel[0])) {
-				node->vel[0] = sqrtf(total_vel*total_vel/2) * (dx > 0 ? 1 : -1);
-				node->vel[1] = sqrtf(total_vel*total_vel/2) * node->team;
+				node->vel[0] = sqrtf(total_vel*total_vel/2) * (dx > 0 ? 1 : -1);				node->vel[1] = sqrtf(total_vel*total_vel/2) * node->team;
 			}
 		}
 	}
@@ -709,22 +707,13 @@ void ship_enemy_attack_logic(Ship *ship) {
 
     if (ship->shiptype == SHIP_INTERCEPTER)
     {
-	if(random(10000) < ship->shotfreq)
+	if(random(100000) < ship->shotfreq)
 	{
 	    laser_fire(ship,player_ship);
 	}
     }
-    if (ship->shiptype == SHIP_TURRET)
-    {
-	if (random(1000) < ship->shotfreq)
-	{
-	    laser_fire(ship, target1);
-	}
-    }else
-    {
 	if(random(100000) < ship->shotfreq)
 	    laser_fire(ship, NULL);
-    }
 }
 
 void ship_enemy_move_logic(Ship *ship) {
@@ -748,76 +737,37 @@ void ship_enemy_move_logic(Ship *ship) {
 		ship->dest[0] = 0;
 }
 
-void deathStar_charge()
+void deathStar_charge_on()
 {
-    Ship * turret1 = ship_create(SHIP_TURRET, TEAM_EMPIRE, (xres/4), yres -80);
-    Ship * turret2 = ship_create(SHIP_TURRET, TEAM_EMPIRE, (xres/4)+75, yres -80);
-    Ship * turret3 = ship_create(SHIP_TURRET, TEAM_EMPIRE, (xres/4)+150, yres -80);
-    Ship * turret4 = ship_create(SHIP_TURRET, TEAM_EMPIRE, (xres/4)+225, yres -80);
-    Ship * turret5 = ship_create(SHIP_TURRET, TEAM_EMPIRE, (xres/4)+300, yres -80);
-    Ship * turret6 = ship_create(SHIP_TURRET, TEAM_EMPIRE, (xres/4)+375, yres -80);
-    Ship * turret7 = ship_create(SHIP_TURRET, TEAM_EMPIRE, (xres/4)+450, yres -80);
-    target1 = ship_create(SHIP_TURRET, TEAM_REBELS, (xres/4)+225, 600);
+    targets[7] = ship_create(SHIP_TURRET, TEAM_REBELS, (xres/4)+70, yres-200);
+    charging = chargemax;
+    targets[7]->is_vulnerable = 1;
+    targets[7]->health        = 1000;
 
-    turret_list = g_list_prepend(turret_list, turret1);
-    turret_list = g_list_prepend(turret_list, turret2);
-    turret_list = g_list_prepend(turret_list, turret3);
-    turret_list = g_list_prepend(turret_list, turret4);
-    turret_list = g_list_prepend(turret_list, turret5);
-    turret_list = g_list_prepend(turret_list, turret6);
-    turret_list = g_list_prepend(turret_list, turret7);
-    turret_list = g_list_prepend(turret_list, target1);
+}
 
-    //target1->is_visible    = 1;
-    target1->is_vulnerable = 1;
-    target1->health        = 200;
-
-    if (target1->health < 100)
-    {
-	turret_list = g_list_remove(turret_list, turret1);
-	turret_list = g_list_remove(turret_list, turret2);
-	turret_list = g_list_remove(turret_list, turret3);
-	turret_list = g_list_remove(turret_list, turret4);
-	turret_list = g_list_remove(turret_list, turret5);
-	turret_list = g_list_remove(turret_list, turret6);
-	turret_list = g_list_remove(turret_list, turret7);
-	turret_list = g_list_remove(turret_list, target1);
-	free(turret1);
-	free(turret2);
-	free(turret3);
-	free(turret4);
-	free(turret5);
-	free(turret6);
-	free(turret7);
-	free(target1);
-    }
+void deathStar_charge_off()
+{
+	int i = 0;
+	for (i; i < 7 ; i++)
+	{
+	    turrets[i]->laser_width = 10;
+	}
+	deathStar_fire();
 }
 
 void deathStar_fire()
 {
-    Ship * turret1 = ship_create(SHIP_TURRET, TEAM_EMPIRE, (xres/4), yres -80);
-    Ship * turret2 = ship_create(SHIP_TURRET, TEAM_EMPIRE, turret1->pos[0]+4, yres -80);
-    Ship * turret3 = ship_create(SHIP_TURRET, TEAM_EMPIRE, turret1->pos[0]+8, yres -80);
-    Ship * turret4 = ship_create(SHIP_TURRET, TEAM_EMPIRE, turret1->pos[0]+12, yres -80);
-    Ship * turret5 = ship_create(SHIP_TURRET, TEAM_EMPIRE, turret1->pos[0]+16, yres -80);
-    Ship * turret6 = ship_create(SHIP_TURRET, TEAM_EMPIRE, turret1->pos[0]+20, yres -80);
-    Ship * turret7 = ship_create(SHIP_TURRET, TEAM_EMPIRE, turret1->pos[0]+24, yres -80);
-    target1 = ship_create(SHIP_TURRET, TEAM_REBELS, (xres/4)+100, 100);
-    target2 = ship_create(SHIP_TURRET, TEAM_REBELS, target1->pos[0]+4, 100);
-    target3 = ship_create(SHIP_TURRET, TEAM_REBELS, target1->pos[0]+8, 100);
-    target4 = ship_create(SHIP_TURRET, TEAM_REBELS, target1->pos[0]+12, 100);
-    target5 = ship_create(SHIP_TURRET, TEAM_REBELS, target1->pos[0]+16, 100);
-    target6 = ship_create(SHIP_TURRET, TEAM_REBELS, target1->pos[0]+20, 100);
-    target7 = ship_create(SHIP_TURRET, TEAM_REBELS, target1->pos[0]+24, 100);
+    charging = chargemin;
+    int playspace = xres-pad-70;
+    playspace = random(playspace);
+    indexes = 0;
+    for (indexes; indexes< 7; indexes++)
+    {
+	targets[indexes] = ship_create(SHIP_TURRET, TEAM_REBELS, playspace+(indexes*10)+halfpad, 100);
+    }
+    cannon = cannonmax;
 
-    turret_list = g_list_prepend(turret_list, turret1);
-    turret_list = g_list_prepend(turret_list, turret2);
-    turret_list = g_list_prepend(turret_list, turret3);
-    turret_list = g_list_prepend(turret_list, turret4);
-    turret_list = g_list_prepend(turret_list, turret5);
-    turret_list = g_list_prepend(turret_list, turret6);
-    turret_list = g_list_prepend(turret_list, turret7);
-    
 }
 
 void laser_check_collision(Laser *laser) {
@@ -863,6 +813,8 @@ Ship* ship_create(int shiptype, int team, int xpos, int ypos) {
 	    ship->is_vulnerable  = 0;
 	    ship->is_visible     = 0;
 	    ship->can_move       = 0;
+	    ship->can_attack     = 1;
+	    ship->death_animation = -1;
 	}else{
 	    ship->is_vulnerable   = 1;
 	    ship->is_visible      = 1;
@@ -926,13 +878,20 @@ void laser_fire(Ship *ship, Ship *homing_target) {
 	node->linewidth = ship->laser_width;
 	node->length = 20;
 
-	if(homing_target != NULL) {
+	if(homing_target == player_ship) {
 		// Set color info (rgba 0.0->1.0)
 		node->color[0] = 1.0;
-		node->color[1] = 1.0;
-		node->color[2] = 1.0;
+		node->color[1] = 0.75;
+		node->color[2] = 0.0;
 		node->color[3] = 1.0;
 	}
+	if (homing_target != player_ship && homing_target != NULL) {
+	    node->color[0] = 0.0;
+	    node->color[1] = 1.0;
+	    node->color[2] = 0.0;
+	    node->color[3] = 1.0;
+	}
+
 	node->homing_target = homing_target;
 
 	// Add to global list of active lasers
@@ -970,5 +929,47 @@ void physics(void)
 	g_list_foreach(enemies_list, (GFunc)ship_enemy_attack_logic, NULL); // Enemy lasers/etc
 	g_list_foreach(laser_list, (GFunc)laser_move_frame, NULL); // Update laser positions
 	g_list_foreach(laser_list, (GFunc)laser_check_collision, NULL); // Run collision detection
+
+	if (charging < 0)
+	{
+	    charging++;
+	}
+	if (charging == chargeon)
+	{
+	    indexes = 0;
+	    for ( indexes; indexes <7; indexes++)
+	    {
+		turrets[indexes]->laser_width = 4;
+	    }
+	    deathStar_charge_on();
+	}
+
+	if (charging >= 0)
+	{
+	    indexes = 0;
+	    for (indexes ; indexes < 7 ; indexes++)
+	    {
+		if(random(1000) < turrets[indexes]->shotfreq)
+		    laser_fire(turrets[indexes], targets[7]);
+	    }
+
+	    if (charging < chargedur)
+	    {
+		free(targets[0]);
+		deathStar_charge_off();
+	    }
+	    charging--;
+	}
+	if (cannon >= 1)
+	{
+	    indexes =0;
+	    for( indexes; indexes < 7 ; indexes++)
+	    {
+		if (random(10) < 5)
+		laser_fire(turrets[indexes],targets[indexes]);
+	    }
+	    cannon--;
+	}
+
 }
 

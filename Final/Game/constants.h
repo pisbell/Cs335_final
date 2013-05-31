@@ -63,7 +63,7 @@ int statsShotfreq[SHIP_COUNT][DIFFICULTY_COUNT] = {
     {   5,  10,  15},
     {   5,   5,   5},
     {   7,   7,   7},
-    {1,1,1}
+    {2,1,1}
 };
 float statsSpeed[SHIP_COUNT][DIFFICULTY_COUNT] = {
     { 0.75,  1.0,  1.5},
@@ -113,6 +113,13 @@ float statsHitboxRadius[SHIP_COUNT] = {
 	40.0,
 	10.0
 };
+
+int chargemax = 2000;
+int chargemin = -10000;
+int cannonmax = 1000;
+int chargeon   = -200;
+int chargedur = 200;
+
 
 // Screen settings
 int xres = 800;

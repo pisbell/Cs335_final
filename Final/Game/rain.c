@@ -794,6 +794,7 @@ void deathStar_physics() {
 	    for (i=0; i < 7; i++)
 			turrets[i]->laser_width = 4;
 		targets[7]->health = INT_MAX;
+		targets[7]->is_vulnerable = 1;
 		deathStar_charging = chargemax;
 	}
 
@@ -812,6 +813,7 @@ void deathStar_physics() {
 				turrets[i]->laser_width = 10;
 				targets[i]->pos[0] = playspace+(i*10)+halfpad;
 			}
+			targets[7]->is_vulnerable = 0;
 			deathStar_charging = chargemin; // Wait before beginning to charge again
 			deathStar_cannon = cannonmax; // Begin firing
 	    }
@@ -867,7 +869,7 @@ Ship* ship_create(int shiptype, int team, int xpos, int ypos) {
 
 	if (shiptype == SHIP_TURRET)
 	{
-	    ship->is_vulnerable  = 1;
+	    ship->is_vulnerable  = 0;
 	    ship->is_visible     = 0;
 	    ship->can_move       = 0;
 	    ship->can_attack     = 1;

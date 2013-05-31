@@ -116,8 +116,8 @@ float statsHitboxRadius[SHIP_COUNT] = {
 
 
 // Death star settings
-int chargemax = 1800;
-int chargemin = -98000;
+int chargemax = 200;
+int chargemin = -10000;
 int cannonmax = 1000;
 
 

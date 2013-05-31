@@ -108,17 +108,17 @@ void laser_fire(Ship *ship, Ship *homing_target);
 void deathStar_fire();
 void deathStar_charge_on();
 void deathStar_charge_off();
+void deathStar_physics();
 
-double shottimer     = 0;
-int show_lasers      = 1;
-int show_text        = 1;
-int difficulty       = DIFFICULTY_EASY;
-int player_score     = 0;
-int charging         = -1000;
-int cannon           = 0;
-int indexes          = 0;
-int ship_select      = SHIP_XWING; // For player to choose ship
-int ship_selected    = 0; // 0 while ship is being selected
+double shottimer       = 0;
+int show_lasers        = 1;
+int show_text          = 1;
+int difficulty         = DIFFICULTY_EASY;
+int player_score       = 0;
+int deathStar_charging = -1000;
+int deathStar_cannon   = 0;
+int ship_select        = SHIP_XWING; // For player to choose ship
+int ship_selected      = 0; // 0 while ship is being selected
 
 
 int main(int argc, char **argv)
@@ -782,7 +782,7 @@ void ship_enemy_move_logic(Ship *ship) {
 void deathStar_charge_on()
 {
     targets[7] = ship_create(SHIP_TURRET, TEAM_REBELS, (xres/4)+70, yres-200);
-    charging = chargemax;
+    deathStar_charging = chargemax;
     targets[7]->is_vulnerable = 1;
     targets[7]->health        = 1000;
 
@@ -800,15 +800,57 @@ void deathStar_charge_off()
 
 void deathStar_fire()
 {
-    charging = chargemin;
+	int i;
+    deathStar_charging = chargemin;
     int playspace = xres-pad-70;
     playspace = random(playspace);
-    indexes = 0;
-    for (indexes; indexes< 7; indexes++)
+    for (i=0; i< 7; i++)
     {
-	targets[indexes] = ship_create(SHIP_TURRET, TEAM_REBELS, playspace+(indexes*10)+halfpad, 100);
+	targets[i] = ship_create(SHIP_TURRET, TEAM_REBELS, playspace+(i*10)+halfpad, 100);
     }
-    cannon = cannonmax;
+    deathStar_cannon = cannonmax;
+
+}
+
+void deathStar_physics() {
+	int i;
+	if (deathStar_charging < 0)
+	{
+	    deathStar_charging++;
+	}
+	if (deathStar_charging == chargeon)
+	{
+	    for (i=0; i <7; i++)
+	    {
+		turrets[i]->laser_width = 4;
+	    }
+	    deathStar_charge_on();
+	}
+
+	if (deathStar_charging >= 0)
+	{
+	    for (i=0; i < 7 ; i++)
+	    {
+		if(random(1000) < turrets[i]->shotfreq)
+		    laser_fire(turrets[i], targets[7]);
+	    }
+
+	    if (deathStar_charging < chargedur)
+	    {
+		free(targets[0]);
+		deathStar_charge_off();
+	    }
+	    deathStar_charging--;
+	}
+	if (deathStar_cannon >= 1)
+	{
+	    for(i=0; i < 7 ; i++)
+	    {
+		if (random(10) < 5)
+		laser_fire(turrets[i],targets[i]);
+	    }
+	    deathStar_cannon--;
+	}
 
 }
 
@@ -965,54 +1007,13 @@ void physics(void)
 	if(input_directions & INPUT_FIRE && random(200) < player_ship->shotfreq)
 		laser_fire(player_ship, NULL);
 
+	deathStar_physics();
 	ship_move_frame(player_ship); // Player movement
 	g_list_foreach(enemies_list, (GFunc)ship_enemy_move_logic, NULL); // Determine enemy destinations
 	g_list_foreach(enemies_list, (GFunc)ship_move_frame, NULL); // Enemy movement
 	g_list_foreach(enemies_list, (GFunc)ship_enemy_attack_logic, NULL); // Enemy lasers/etc
 	g_list_foreach(laser_list, (GFunc)laser_move_frame, NULL); // Update laser positions
 	g_list_foreach(laser_list, (GFunc)laser_check_collision, NULL); // Run collision detection
-
-	if (charging < 0)
-	{
-	    charging++;
-	}
-	if (charging == chargeon)
-	{
-	    indexes = 0;
-	    for ( indexes; indexes <7; indexes++)
-	    {
-		turrets[indexes]->laser_width = 4;
-	    }
-	    deathStar_charge_on();
-	}
-
-	if (charging >= 0)
-	{
-	    indexes = 0;
-	    for (indexes ; indexes < 7 ; indexes++)
-	    {
-		if(random(1000) < turrets[indexes]->shotfreq)
-		    laser_fire(turrets[indexes], targets[7]);
-	    }
-
-	    if (charging < chargedur)
-	    {
-		free(targets[0]);
-		deathStar_charge_off();
-	    }
-	    charging--;
-	}
-	if (cannon >= 1)
-	{
-	    indexes =0;
-	    for( indexes; indexes < 7 ; indexes++)
-	    {
-		if (random(10) < 5)
-		laser_fire(turrets[indexes],targets[indexes]);
-	    }
-	    cannon--;
-	}
-
 }
 
 void player_ship_selection_key(int k1, int k2) {

@@ -8,6 +8,7 @@
 #include <string.h>
 #include <math.h>
 #include <time.h>
+#include <limits.h>
 #include <glib.h>
 #include <GL/glfw.h>
 
@@ -105,9 +106,6 @@ void laser_move_frame(Laser *node);
 void laser_check_collision(Laser *node);
 void laser_render(Laser *node);
 void laser_fire(Ship *ship, Ship *homing_target);
-void deathStar_fire();
-void deathStar_charge_on();
-void deathStar_charge_off();
 void deathStar_physics();
 
 double shottimer       = 0;
@@ -325,11 +323,11 @@ int InitGL(GLvoid)
 		explosion_textures[i-1] = tex_readgl_bmp(filename, 1.0);
 	}
 
-    	i =0;
-    	for (i ; i < 7 ; i++)
-    	{
+	for(i=0 ; i < 7 ; i++) {
 		turrets[i] = ship_create(SHIP_TURRET, TEAM_EMPIRE, (xres/4)+ (i*10)+45, yres - (abs(4-i)*5)-10);
-    	}
+		targets[i] = ship_create(SHIP_TURRET, TEAM_REBELS, 0, 100);
+	}
+    targets[7] = ship_create(SHIP_TURRET, TEAM_REBELS, (xres/4)+70, yres-200);
 
 	return 1;
 }
@@ -779,77 +777,51 @@ void ship_enemy_move_logic(Ship *ship) {
 		ship->dest[0] = 0;
 }
 
-void deathStar_charge_on()
-{
-    targets[7] = ship_create(SHIP_TURRET, TEAM_REBELS, (xres/4)+70, yres-200);
-    deathStar_charging = chargemax;
-    targets[7]->is_vulnerable = 1;
-    targets[7]->health        = 1000;
-
-}
-
-void deathStar_charge_off()
-{
-	int i = 0;
-	for (i; i < 7 ; i++)
-	{
-	    turrets[i]->laser_width = 10;
-	}
-	deathStar_fire();
-}
-
-void deathStar_fire()
-{
-	int i;
-    deathStar_charging = chargemin;
-    int playspace = xres-pad-70;
-    playspace = random(playspace);
-    for (i=0; i< 7; i++)
-    {
-	targets[i] = ship_create(SHIP_TURRET, TEAM_REBELS, playspace+(i*10)+halfpad, 100);
-    }
-    deathStar_cannon = cannonmax;
-
-}
-
 void deathStar_physics() {
+	// deathStar_charging begins at a negative value (chargemin) and is incremented continually, meanwhile the deathStar is dormant.
+	// deathStar_charging triggers the "charging" stage when it hits 0. it is bumped to a large positive value (chargemax).
+	// deathStar_charging causes lasers to fire into the center of the deathStar when positive, a "charging" animation. it is decremented during this time.
+	// after it hits 0 again, the charging cycle is reset and the deathStar begins firing, using deathStar_cannon as a timer.
 	int i;
-	if (deathStar_charging < 0)
-	{
-	    deathStar_charging++;
-	}
-	if (deathStar_charging == chargeon)
-	{
-	    for (i=0; i <7; i++)
-	    {
-		turrets[i]->laser_width = 4;
-	    }
-	    deathStar_charge_on();
+
+	if (deathStar_charging < 0) {
+		// Remain dormant another frame
+		deathStar_charging++;
 	}
 
-	if (deathStar_charging >= 0)
-	{
-	    for (i=0; i < 7 ; i++)
-	    {
-		if(random(1000) < turrets[i]->shotfreq)
-		    laser_fire(turrets[i], targets[7]);
-	    }
-
-	    if (deathStar_charging < chargedur)
-	    {
-		free(targets[0]);
-		deathStar_charge_off();
-	    }
-	    deathStar_charging--;
+	if (deathStar_charging == 0) {
+		// Prepare to charge, always continues on to next block
+	    for (i=0; i < 7; i++)
+			turrets[i]->laser_width = 4;
+		targets[7]->health = INT_MAX;
+		deathStar_charging = chargemax;
 	}
-	if (deathStar_cannon >= 1)
-	{
-	    for(i=0; i < 7 ; i++)
-	    {
-		if (random(10) < 5)
-		laser_fire(turrets[i],targets[i]);
+
+	if (deathStar_charging > 0) {
+		deathStar_charging--;
+		// Currently charging laser
+
+	    for (i=0; i < 7; i++)
+			if(random(1000) < turrets[i]->shotfreq)
+				laser_fire(turrets[i], targets[7]);
+
+	    if (deathStar_charging == 0) {
+			// Done charging
+			int playspace = random(xres-pad-70);
+			for(i=0; i< 7; i++) {
+				turrets[i]->laser_width = 10;
+				targets[i]->pos[0] = playspace+(i*10)+halfpad;
+			}
+			deathStar_charging = chargemin; // Wait before beginning to charge again
+			deathStar_cannon = cannonmax; // Begin firing
 	    }
-	    deathStar_cannon--;
+	}
+
+	if(deathStar_cannon > 0) {
+		deathStar_cannon--;
+	    for(i=0; i < 7; i++)
+			if(random(10) < 5)
+				laser_fire(turrets[i],targets[i]);
 	}
 
 }
@@ -872,6 +844,7 @@ void laser_check_collision(Laser *laser) {
 		// Check our single ship against enemy laser.
 		// (If we made another list for rebel ships, we could possibly do multiplayer.)
 		ship_laser_check_collision(player_ship, dplaser);
+		ship_laser_check_collision(targets[7], dplaser);
 	}
 }
 
@@ -894,7 +867,7 @@ Ship* ship_create(int shiptype, int team, int xpos, int ypos) {
 
 	if (shiptype == SHIP_TURRET)
 	{
-	    ship->is_vulnerable  = 0;
+	    ship->is_vulnerable  = 1;
 	    ship->is_visible     = 0;
 	    ship->can_move       = 0;
 	    ship->can_attack     = 1;

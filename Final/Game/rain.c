@@ -480,7 +480,13 @@ void ship_render(Ship *ship)
 		} else {
 			enemies_list = g_list_remove(enemies_list, ship);
 			free(ship);
-			//TODO: If no more enemies, bump difficulty and spawn enemies (victory screen after DIFFICULTY_HARD?)
+			if(enemies_list == NULL) {
+				if(++difficulty < DIFFICULTY_COUNT) {
+					enemyFormation( 5, 6, 14, 15); // takes # of each enemies we want,
+				} else {
+					//TODO: Victory screen?
+				}
+			}
 		}
 	}
 

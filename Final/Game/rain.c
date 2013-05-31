@@ -10,6 +10,7 @@
 #include <time.h>
 #include <glib.h>
 #include <GL/glfw.h>
+#include <mysql.h>
 
 #include "constants.h"
 #include "defs.h"
@@ -31,6 +32,7 @@
 #define random(a) (rand()%a)
 
 //prototypes
+MYSQL* connect();
 int InitGL(GLvoid);
 void checkkey(int k1, int k2);
 void physics(void);
@@ -105,6 +107,7 @@ int ship_selected    = 0; // 0 while ship is being selected
 
 int main(int argc, char **argv)
 {
+    	MYSQL* conn = connect();
 	int i, nmodes;
 	GLFWvidmode glist[256];
 	open_log_file();
@@ -253,6 +256,24 @@ void checkkey(int k1, int k2)
 		enemyFormation(5, 10, 15, 20);
 	    }
 	}
+}
+
+MYSQL* connect()
+{
+       MYSQL *conn;
+       char *server = "localhost";
+       char *user = "terrymci_terry";
+       char *password = "tk1947"; /* set me first */
+       char *database = "terrymci_swg";
+       conn = mysql_init(NULL);
+
+       /* Connect to database */
+       if (!mysql_real_connect(conn, server, user, password, database, 
+		   0, NULL, 0)) 
+      {
+  	  fprintf(stderr, "%s\n", mysql_error(conn));
+	  exit(1);
+      }
 }
 
 int InitGL(GLvoid)

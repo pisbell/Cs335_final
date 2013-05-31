@@ -1,6 +1,6 @@
 // CS 335 - Spring 2013 Final
 // Program: STAR WARS Galaga
-// Authors: Jacob Courtney, Patrick Isbell, Terry McIrvin
+// Authors: Jacob Courtneay, Patrick Isbell, Terry McIrvin
 // Based on code by Gordon Griesel
 
 #include <stdio.h>

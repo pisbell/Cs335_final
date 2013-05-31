@@ -36,6 +36,7 @@ void checkkey(int k1, int k2);
 void physics(void);
 void render(void);
 void enemyFormation(int, int, int, int);// takes # of each enemies we want,
+void player_ship_selection(void);
 extern GLuint loadBMP(const char *imagepath);
 extern GLuint tex_readgl_bmp(char *fileName, int alpha_channel);
 
@@ -98,12 +99,13 @@ int show_lasers      = 1;
 int show_text        = 1;
 int difficulty = DIFFICULTY_EASY;
 int player_score     = 0;
+int ship_select      = SHIP_XWING; // For player to choose ship
+int ship_selected    = 0; // 0 while ship is being selected
 
 
 int main(int argc, char **argv)
 {
 	int i, nmodes;
-	int ship_select = 4;	// For player to choose ship
 	GLFWvidmode glist[256];
 	open_log_file();
 	srand((unsigned int)time(NULL));
@@ -113,23 +115,8 @@ int main(int argc, char **argv)
 	nmodes = glfwGetVideoModes(glist, 100);
 	xres = glist[nmodes-1].Width;
 	yres = glist[nmodes-1].Height;
-	player_ship = ship_create(ship_select, TEAM_REBELS, xres/2, 100.0); 
-	
-	//TODO: On menu, when player selects play, present ship selection 
-	//screen.  Ship choice sets ship_select variable.
-
-	//enemytmp = ship_create(SHIP_FIGHTER, TEAM_EMPIRE, xres/4, 5*yres/6);
-	//enemies_list = g_list_prepend(enemies_list, enemytmp);
-	//enemytmp = ship_create(SHIP_BOMBER, TEAM_EMPIRE, 2*xres/4, 3*yres/6);
-	//enemies_list = g_list_prepend(enemies_list, enemytmp);
-	//enemytmp = ship_create(SHIP_OPRESSOR, TEAM_EMPIRE, 3*xres/4, 5*yres/6);
-	//enemies_list = g_list_prepend(enemies_list, enemytmp);
-	
-	enemyFormation( 5, 6, 14, 15); // takes # of each enemies we want,
-
 
 	Log("setting window to: %i x %i\n",xres,yres);
-	//if (!glfwOpenWindow(xres, yres, 0, 0, 0, 0, 0, 0, GLFW_WINDOW)) {
 	if (!glfwOpenWindow(xres,yres,8,8,8,0,32,0,GLFW_FULLSCREEN)) {
 		close_log_file();
 		glfwTerminate();
@@ -138,18 +125,21 @@ int main(int argc, char **argv)
 
 	glfwSetWindowTitle("STAR WARS Galaga");
 	glfwSetWindowPos(0, 0);
-	InitGL();
-	glfwSetKeyCallback((GLFWkeyfun)(checkkey));
 	glfwDisable( GLFW_MOUSE_CURSOR );
-	
+	InitGL();
+
 	#ifdef USE_FONTS
-	//glShadeModel(GL_FLAT);
 	glShadeModel(GL_SMOOTH);
 	//texture maps must be enabled to draw fonts
 	glEnable(GL_TEXTURE_2D);
 	initialize_fonts();
 	#endif //USE_FONTS
+
+	player_ship_selection();
+	player_ship = ship_create(ship_select, TEAM_REBELS, xres/2, 100.0); 
 	
+	enemyFormation( 5, 6, 14, 15); // takes # of each enemies we want,
+	glfwSetKeyCallback((GLFWkeyfun)(checkkey));
 	while(1) {
 		for (i=0; i<time_control; i++)
 			physics();
@@ -159,6 +149,7 @@ int main(int argc, char **argv)
 		if (glfwGetKey(GLFW_KEY_ESC)) break;
 		if (!glfwGetWindowParam(GLFW_OPENED)) break;
 	}
+
 	glfwSetKeyCallback((GLFWkeyfun)NULL);
 	glfwSetMousePosCallback((GLFWmouseposfun)NULL);
 	close_log_file();
@@ -289,19 +280,7 @@ int InitGL(GLvoid)
 	return 1;
 }
 
-void render(GLvoid)
-{
-	//Log("render()...\n");
-	glfwGetWindowSize(&xres, &yres);
-	glViewport(halfpad, 0, xres-pad, yres);
-	//clear color buffer
-	glClear(GL_COLOR_BUFFER_BIT);
-	glMatrixMode (GL_PROJECTION); glLoadIdentity();
-	glMatrixMode(GL_MODELVIEW); glLoadIdentity();
-	glOrtho(0, xres, 0, yres, -1, 1);
-	glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
-	glEnable(GL_BLEND);
-
+void render_bg(void) {
 	//background 
 	glBegin(GL_QUADS);
 		glColor3f(0.0f, 0.0f, 0.0f);
@@ -327,7 +306,22 @@ void render(GLvoid)
 		glTexCoord2f(1.0f, 1.0f); glVertex2i(xres-halfpad, yres-1);
 	glEnd();
 	glBindTexture(GL_TEXTURE_2D, 0);
+}
 
+void render(GLvoid)
+{
+	//Log("render()...\n");
+	glfwGetWindowSize(&xres, &yres);
+	glViewport(halfpad, 0, xres-pad, yres);
+	//clear color buffer
+	glClear(GL_COLOR_BUFFER_BIT);
+	glMatrixMode (GL_PROJECTION); glLoadIdentity();
+	glMatrixMode(GL_MODELVIEW); glLoadIdentity();
+	glOrtho(0, xres, 0, yres, -1, 1);
+	glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+	glEnable(GL_BLEND);
+
+	render_bg();
 
 	if (show_lasers) {
 		g_list_foreach(laser_list, (GFunc)laser_render, NULL);
@@ -860,5 +854,68 @@ void physics(void)
 	g_list_foreach(enemies_list, (GFunc)ship_enemy_attack_logic, NULL); // Enemy lasers/etc
 	g_list_foreach(laser_list, (GFunc)laser_move_frame, NULL); // Update laser positions
 	g_list_foreach(laser_list, (GFunc)laser_check_collision, NULL); // Run collision detection
+}
+
+void player_ship_selection_key(int k1, int k2) {
+	if(k2 == GLFW_RELEASE)
+		return;
+	if(k1 == GLFW_KEY_LEFT) {
+		ship_select = SHIP_XWING;
+	}
+	if(k1 == GLFW_KEY_RIGHT) {
+		ship_select = SHIP_AWING;
+	}
+	if(k1 == GLFW_KEY_ENTER || k1 == ' ') {
+		ship_selected = 1;
+	}
+}
+
+void player_ship_selection(void) {
+	glfwSetKeyCallback((GLFWkeyfun)(player_ship_selection_key));
+	Ship* xwing = ship_create(SHIP_XWING, TEAM_REBELS, 200, 200);
+	Ship* awing = ship_create(SHIP_AWING, TEAM_REBELS, 500, 200);
+	Rect r;
+	r.center = 1;
+
+	while(!ship_selected) {
+		glfwGetWindowSize(&xres, &yres);
+		glViewport(halfpad, 0, xres-pad, yres);
+		//clear color buffer
+		glClear(GL_COLOR_BUFFER_BIT);
+		glMatrixMode (GL_PROJECTION); glLoadIdentity();
+		glMatrixMode(GL_MODELVIEW); glLoadIdentity();
+		glOrtho(0, xres, 0, yres, -1, 1);
+		glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+		glEnable(GL_BLEND);
+
+		xwing->pos[1] = awing->pos[1] = yres/2;
+		xwing->pos[0] = 2*xres/5;
+		awing->pos[0] = 3*xres/5;
+		xwing->shields = 0;
+		awing->shields = 0;
+		if(ship_select == SHIP_XWING)
+			xwing->shields = 1000;
+		if(ship_select == SHIP_AWING)
+			awing->shields = 1000;
+
+		render_bg();
+		ship_render(xwing);
+		ship_render(awing);
+
+		r.left   = (xwing->pos[0]+awing->pos[0])/2;
+		r.bot    = 2*yres/3;
+		r.center = 1;
+		ggprint16(&r, 16, 0x000000ff, "Choose your ship", NULL);
+		r.left   = xwing->pos[0];
+		r.bot    = xwing->pos[1] - 100;
+		ggprint16(&r, 16, 0x000000ff, "X-Wing", NULL);
+		r.left   = awing->pos[0];
+		r.bot    = awing->pos[1] - 100;
+		ggprint16(&r, 16, 0x000000ff, "A-Wing", NULL);
+
+		glfwSwapBuffers();
+		if (glfwGetKey(GLFW_KEY_ESC)) break;
+		if (!glfwGetWindowParam(GLFW_OPENED)) break;
+	}
 }
 

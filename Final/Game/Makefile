@@ -3,10 +3,10 @@
 ###########################################
 CC     = gcc
 ##CFLAGS = -I../../include   -pthread -O2 -Wall
-CFLAGS = -I../include -pthread -O1 `mysql_config --cflags` `pkg-config --cflags glib-2.0`
+CFLAGS = -I../include -pthread -O1 #`mysql_config --cflags`\ `pkg-config --cflags glib-2.0`
 
 LIB       = ../lib/x11/libglfw.a
-LFLAGS    = $(LIB) -lrt -lX11 -lGLU -lGL -pthread -lm -lXrandr `mysql_config --libs` `pkg-config --libs glib-2.0`
+LFLAGS    = $(LIB) -lrt -lX11 -lGLU -lGL -pthread -lm -lXrandr #`mysql_config --libs`\ `pkg-config --libs glib-2.0`
 
 all: rain
 

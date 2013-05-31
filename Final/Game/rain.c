@@ -39,6 +39,7 @@
 #ifdef USE_DB
 MYSQL* connect();
 #endif //USE_DB
+
 int InitGL(GLvoid);
 void checkkey(int k1, int k2);
 void physics(void);
@@ -122,9 +123,10 @@ int ship_selected    = 0; // 0 while ship is being selected
 
 int main(int argc, char **argv)
 {
-#ifdef USE_DB	
+	#ifdef USE_DB	
 	MYSQL* conn = connect();
-#endif //USE_DB
+	#endif //USE_DB
+
 	int i, nmodes;
 	GLFWvidmode glist[256];
 	open_log_file();
@@ -183,6 +185,11 @@ int main(int argc, char **argv)
 	g_list_free(enemies_list);
 	g_list_foreach(laser_list, (GFunc)free, NULL);
 	g_list_free(laser_list);
+
+	#ifdef USE_DB	
+	mysql_close(conn);
+	#endif //USE_DB
+
 	return 0;
 }
 

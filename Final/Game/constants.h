@@ -18,7 +18,9 @@
 #define SHIP_OPRESSOR    3
 #define SHIP_AWING       4
 #define SHIP_XWING       5
-#define SHIP_COUNT       6
+#define SHIP_TURRET      6
+#define SHIP_COUNT       7
+
 
 // Indexes/IDs for difficulty levels.
 #define DIFFICULTY_EASY   0
@@ -33,7 +35,8 @@ int statsHealth[SHIP_COUNT][DIFFICULTY_COUNT] = {
     { 200, 300, 400},
     { 300, 400, 500},
     {1000, 800, 650},
-    { 800, 750, 600}
+    { 800, 750, 600},
+    {0,0,0}
 };
 int statsShields[SHIP_COUNT][DIFFICULTY_COUNT] = {
     { 100, 200, 300},
@@ -41,7 +44,8 @@ int statsShields[SHIP_COUNT][DIFFICULTY_COUNT] = {
     {  50,  75, 150},
     { 100, 200, 300},
     {1000, 700, 500},
-    { 750, 500, 350}
+    { 750, 500, 350},
+    {0,0,0}
 };
 int statsDamage[SHIP_COUNT][DIFFICULTY_COUNT] = {
     { 100, 175, 225},
@@ -49,7 +53,8 @@ int statsDamage[SHIP_COUNT][DIFFICULTY_COUNT] = {
     {   2,   6,   9},
     { 400, 500, 600},
     {  75,  75,  75},
-    { 100, 100, 100}
+    { 100, 100, 100},
+    {10,25,50}
 };
 int statsShotfreq[SHIP_COUNT][DIFFICULTY_COUNT] = {
     {  10,  25,  40},
@@ -57,15 +62,17 @@ int statsShotfreq[SHIP_COUNT][DIFFICULTY_COUNT] = {
     { 100,  70,  95},
     {   5,  10,  15},
     {   5,   5,   5},
-    {   7,   7,   7}
+    {   7,   7,   7},
+    {2,1,1}
 };
 float statsSpeed[SHIP_COUNT][DIFFICULTY_COUNT] = {
     { 0.75,  1.0,  1.5},
     { 0.5 ,  2.0,  3.0},
     { 1.0 ,  2.0,  3.0},
     { 0.5 ,  1.0,  1.5},
+    { 1.5 ,  1.5,  1.5},
     { 2.5 ,  2.5,  2.5},
-    { 1.5 ,  1.5,  1.5}
+    {3.0,3.0,3.0}
 };
 
 int statsScore[SHIP_COUNT][DIFFICULTY_COUNT] = {
@@ -74,7 +81,8 @@ int statsScore[SHIP_COUNT][DIFFICULTY_COUNT] = {
     { 250, 250, 250},
     { 350, 350, 350},
     {-250,-200,-100},
-    {-200,-150,-100}
+    {-200,-150,-100},
+    {0,0,0}
 };
 
 int statsLaserWidth[SHIP_COUNT][DIFFICULTY_COUNT] = {
@@ -83,10 +91,12 @@ int statsLaserWidth[SHIP_COUNT][DIFFICULTY_COUNT] = {
     {   1,   1,   1},
     {  10,  10,  10},
     {   3,   3,   3},
-    {   3,   3,   3}
+    {   3,   3,   3},
+    {4,4,4}
 };
 
 float statsEdgeLength[SHIP_COUNT] = {
+	75.0,
 	75.0,
 	75.0,
 	75.0,
@@ -100,8 +110,16 @@ float statsHitboxRadius[SHIP_COUNT] = {
 	40.0,
 	40.0,
 	40.0,
-	40.0
+	40.0,
+	10.0
 };
+
+int chargemax = 2000;
+int chargemin = -10000;
+int cannonmax = 1000;
+int chargeon   = -200;
+int chargedur = 200;
+
 
 // Screen settings
 int xres = 800;

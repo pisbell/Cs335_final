@@ -73,6 +73,8 @@ typedef struct t_ship {
 	float speed; 	     // Speed ship will move at (not current speed, and there is no acceleration)
 	float edge_length;   // Edge size of square texture
 	float hitbox_radius; // Radius of circular hitbox
+	float dodge_radius;  // Extra radius from which ship will attempt to dodge lasers
+	int dodge_info; // Sign is direction to dodge (-+ = left/right), magnitude is distance from laser, smaller is closer so more dangerous
 	int death_animation; // Progress of explosion, -1 disables
 } Ship;
 
@@ -664,7 +666,8 @@ void laser_move_frame(Laser *node) {
 			node->vel[1] = scale * dy;
 
 			if(fabs(node->vel[1]) < fabs(node->vel[0])) {
-				node->vel[0] = sqrtf(total_vel*total_vel/2) * (dx > 0 ? 1 : -1);				node->vel[1] = sqrtf(total_vel*total_vel/2) * node->team;
+				node->vel[0] = sqrtf(total_vel*total_vel/2) * (dx > 0 ? 1 : -1);
+				node->vel[1] = sqrtf(total_vel*total_vel/2) * node->team;
 			}
 		}
 	}
@@ -718,6 +721,7 @@ void ship_laser_check_collision(Ship *ship, Laser **dplaser) {
 		float d1 = laser->pos[1] - ship->pos[1];
 		float distance = sqrt((d0*d0)+(d1*d1));
 		if (distance <= ship->hitbox_radius) {
+			// Ship is hit
 			if (ship->shields > 0)
 				ship->shields -= laser->damage;
 			else
@@ -733,7 +737,12 @@ void ship_laser_check_collision(Ship *ship, Laser **dplaser) {
 			laser_list = g_list_remove(laser_list, laser);
 			free(laser);
 			*dplaser = NULL;
-			return;
+		} else if(distance <= ship->hitbox_radius + ship->dodge_radius && ship->pos[1] > laser->pos[1]) {
+			// Ship not hit, but close enough to trigger evasive maneuvers
+			// Ship will evade closest laser within its dodge radius.
+			int dodgedir = d0 > 0 ? -1 : 1; // Dodge in opposite direction of laser
+			if(ship->dodge_info == 0 || distance < ship->dodge_info) // Only go this direction if it's the closest threat
+				ship->dodge_info = dodgedir * distance;
 		}
 	}
 }
@@ -758,23 +767,45 @@ void ship_enemy_attack_logic(Ship *ship) {
 
 void ship_enemy_move_logic(Ship *ship) {
 	ship->dest[1] = ship->pos[1];
+	int direction = (ship->dest[0] > ship->pos[0]) ? 1 : -1;
+	int dist = fabs(ship->dest[0] - ship->pos[0]);
 
 	if(ship->shiptype == SHIP_OPRESSOR) {
-	    	if(abs(ship->pos[0] - ship->dest[0]) < 5)
-		    ship->dest[0] = random(500) + player_ship->pos[0]-250;
+		if(dist < 5)
+			ship->dest[0] = random(500) + player_ship->pos[0]-250;
 		if (ship->dest[0] < halfpad)
-		    ship->dest[0] = halfpad + ship->edge_length/2;
+			ship->dest[0] = halfpad + ship->edge_length/2;
 		if (ship->dest[0] > xres - halfpad)
-		    ship->dest[0] = xres - halfpad - ship->edge_length/2;
+			ship->dest[0] = xres - halfpad - ship->edge_length/2;
 		return;
 	}
 
-	if(ship->dest[0] == 0 && ship->pos[0] <= halfpad+ (ship->edge_length/2))
+
+	if(ship->dodge_info != 0) {
+		if(dist < ship->speed) {
+			// dodge complete, flip direction back
+			ship->dest[0] = ship->dodge_info > 0 ? 0 : xres+100;
+			ship->dodge_info = 0;
+			dist = ship->speed; // To throw off default direction at bottom of function
+		} else if(direction == 1 && ship->dodge_info < 0) {
+			// dodge left
+			ship->dest[0] = ship->pos[0] - ship->edge_length;
+		} else if(direction == -1 && ship->dodge_info > 0) {
+			// dodge right
+			ship->dest[0] = ship->pos[0] + ship->edge_length;
+		}
+	}
+
+	if(ship->pos[0] <= halfpad+ (ship->edge_length/2)) {
 		ship->dest[0] = xres+100;
-	else if(ship->dest[0] >= xres && ship->pos[0] >= xres-halfpad-(ship->edge_length/2))
+		ship->dodge_info = 0;
+	} else if(ship->pos[0] >= xres-halfpad-(ship->edge_length/2)) {
 		ship->dest[0] = 0;
-	else if(ship->dest[0] == ship->pos[0])
+		ship->dodge_info = 0;
+	} else if(dist < ship->speed) {
 		ship->dest[0] = 0;
+		ship->dodge_info = 0;
+	}
 }
 
 void deathStar_physics() {
@@ -887,6 +918,8 @@ Ship* ship_create(int shiptype, int team, int xpos, int ypos) {
 
 	ship->edge_length = statsEdgeLength[shiptype];
 	ship->hitbox_radius = statsHitboxRadius[shiptype];
+	ship->dodge_radius = statsDodgeRadius[shiptype][difficulty];
+	ship->dodge_info = 0;
 
 	return ship;
 }
@@ -984,11 +1017,11 @@ void physics(void)
 
 	deathStar_physics();
 	ship_move_frame(player_ship); // Player movement
+	g_list_foreach(laser_list, (GFunc)laser_move_frame, NULL); // Update laser positions
+	g_list_foreach(laser_list, (GFunc)laser_check_collision, NULL); // Run collision detection
 	g_list_foreach(enemies_list, (GFunc)ship_enemy_move_logic, NULL); // Determine enemy destinations
 	g_list_foreach(enemies_list, (GFunc)ship_move_frame, NULL); // Enemy movement
 	g_list_foreach(enemies_list, (GFunc)ship_enemy_attack_logic, NULL); // Enemy lasers/etc
-	g_list_foreach(laser_list, (GFunc)laser_move_frame, NULL); // Update laser positions
-	g_list_foreach(laser_list, (GFunc)laser_check_collision, NULL); // Run collision detection
 }
 
 void player_ship_selection_key(int k1, int k2) {

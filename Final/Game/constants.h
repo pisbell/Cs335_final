@@ -113,6 +113,15 @@ float statsHitboxRadius[SHIP_COUNT] = {
 	40.0,
 	10.0
 };
+float statsDodgeRadius[SHIP_COUNT][DIFFICULTY_COUNT] = {
+    {   0,   0,  10},
+    {   0,  10,  30},
+    {   0,  10,  30},
+    {   0,   0,   0},
+    {   0,   0,   0},
+    {   0,   0,   0},
+    {   0,   0,   0}
+};
 
 
 // Death star settings

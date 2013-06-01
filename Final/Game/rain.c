@@ -119,6 +119,7 @@ int deathStar_charging = -1000;
 int deathStar_cannon   = 0;
 int ship_select        = SHIP_XWING; // For player to choose ship
 int ship_selected      = 0; // 0 while ship is being selected
+int demo_mode          = 0; // Game plays itself
 
 
 int main(int argc, char **argv)
@@ -715,12 +716,12 @@ void ship_laser_check_collision(Ship *ship, Laser **dplaser) {
 		return;
 
 	Laser *laser = *dplaser;
-	if(ship->is_vulnerable && laser->team != ship->team) {
+	if(laser->team != ship->team) {
 		//collision detection for laser on ship
 		float d0 = laser->pos[0] - ship->pos[0];
 		float d1 = laser->pos[1] - ship->pos[1];
 		float distance = sqrt((d0*d0)+(d1*d1));
-		if (distance <= ship->hitbox_radius) {
+		if (ship->is_vulnerable && distance <= ship->hitbox_radius) {
 			// Ship is hit
 			if (ship->shields > 0)
 				ship->shields -= laser->damage;
@@ -998,22 +999,29 @@ void physics(void)
 	// each ship, AI will be much simpler and all ships can have the same
 	// movement routine.
 
-	VecCopy(player_ship->pos, player_ship->dest);
-	if(input_directions & INPUT_LEFT) {
-		player_ship->dest[0] -= 50.0;
-		if(player_ship->dest[0] < halfpad+ (player_ship->edge_length/2))
-			player_ship->dest[0] = halfpad+ (player_ship->edge_length/2);
+	if(demo_mode) {
+		player_ship->is_vulnerable = 0;
+		player_ship->shields = 0;
+		ship_enemy_move_logic(player_ship);
+		if(random(200) < player_ship->shotfreq)
+			laser_fire(player_ship, NULL);
+	} else {
+		VecCopy(player_ship->pos, player_ship->dest);
+		if(input_directions & INPUT_LEFT) {
+			player_ship->dest[0] -= 50.0;
+			if(player_ship->dest[0] < halfpad+ (player_ship->edge_length/2))
+				player_ship->dest[0] = halfpad+ (player_ship->edge_length/2);
+		}
+		if(input_directions & INPUT_RIGHT) {
+			player_ship->dest[0] += 50.0;
+		   if(player_ship->dest[0] > xres-halfpad-(player_ship->edge_length/2))
+				player_ship->dest[0] =xres-halfpad-(player_ship->edge_length/2);
+		}
+		if(input_directions & INPUT_UP)    player_ship->dest[1] += 50.0;
+		if(input_directions & INPUT_DOWN)  player_ship->dest[1] -= 50.0;
+		if(input_directions & INPUT_FIRE && random(200) < player_ship->shotfreq)
+			laser_fire(player_ship, NULL);
 	}
-	if(input_directions & INPUT_RIGHT) {
-		player_ship->dest[0] += 50.0;
-	   if(player_ship->dest[0] > xres-halfpad-(player_ship->edge_length/2))
-			player_ship->dest[0] =xres-halfpad-(player_ship->edge_length/2);
-	}
-	if(input_directions & INPUT_UP)    player_ship->dest[1] += 50.0;
-	if(input_directions & INPUT_DOWN)  player_ship->dest[1] -= 50.0;
-
-	if(input_directions & INPUT_FIRE && random(200) < player_ship->shotfreq)
-		laser_fire(player_ship, NULL);
 
 	deathStar_physics();
 	ship_move_frame(player_ship); // Player movement
@@ -1034,6 +1042,11 @@ void player_ship_selection_key(int k1, int k2) {
 		ship_select = SHIP_AWING;
 	}
 	if(k1 == GLFW_KEY_ENTER || k1 == ' ') {
+		ship_selected = 1;
+	}
+	if(k1 == 'D') {
+		ship_select = SHIP_XWING;
+		demo_mode = 1;
 		ship_selected = 1;
 	}
 }
@@ -1074,6 +1087,8 @@ void player_ship_selection(void) {
 		r.bot    = 2*yres/3;
 		r.center = 1;
 		ggprint16(&r, 16, 0x000000ff, "Choose your ship", NULL);
+		r.bot    = 2*yres/3-24;
+		ggprint16(&r, 16, 0x000000ff, "Press d for demo", NULL);
 		r.left   = xwing->pos[0];
 		r.bot    = xwing->pos[1] - 100;
 		ggprint16(&r, 16, 0x000000ff, "X-Wing", NULL);

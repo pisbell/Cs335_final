@@ -118,8 +118,8 @@ float statsDodgeRadius[SHIP_COUNT][DIFFICULTY_COUNT] = {
     {   0,  10,  30},
     {   0,  10,  30},
     {   0,   0,   0},
-    {   0,   0,   0},
-    {   0,   0,   0},
+    {  80,  80,  80},
+    {  80,  80,  80},
     {   0,   0,   0}
 };
 

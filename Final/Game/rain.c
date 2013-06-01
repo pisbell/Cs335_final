@@ -1045,7 +1045,6 @@ void player_ship_selection_key(int k1, int k2) {
 		ship_selected = 1;
 	}
 	if(k1 == 'D') {
-		ship_select = SHIP_XWING;
 		demo_mode = 1;
 		ship_selected = 1;
 	}

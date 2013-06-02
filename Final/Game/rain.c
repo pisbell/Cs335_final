@@ -18,7 +18,6 @@
 //These components can be turned on and off
 #define USE_FONTS
 #define USE_LOG
-//#define USE_DB
 
 #ifdef USE_LOG
 #include "log.h"
@@ -28,18 +27,9 @@
 #include "fonts.h"
 #endif //USE_FONTS
 
-#ifdef USE_DB
-#include <mysql.h>
-#endif //USE_DB
-
 //macros
 #define rnd() (((double)rand())/(double)RAND_MAX)
 #define random(a) (rand()%a)
-
-//prototypes
-#ifdef USE_DB
-MYSQL* connect();
-#endif //USE_DB
 
 int InitGL(GLvoid);
 void checkkey(int k1, int k2);
@@ -54,7 +44,8 @@ extern GLuint tex_readgl_bmp(char *fileName, int alpha_channel);
 const float timeslice = 1.0f/60.0f;
 int time_control = 5;
 int input_directions = 0; //bitmask of arrow keys currently down, see INPUT_* macros
-
+int game_over = 0;	  //has player beaten game or run out of lives?
+int victory = 0;	  //did player beat every level?	
 typedef struct t_ship {
 	int team; 	     // TEAM_REBELS or TEAM_EMPIRE
 	int shiptype;
@@ -89,7 +80,6 @@ typedef struct t_laser {
 	Ship* homing_target;
 } Laser;
 
-
 GList *laser_list   = NULL;
 GList *enemies_list = NULL;
 GList *turret_list  = NULL;
@@ -121,13 +111,8 @@ int ship_select        = SHIP_XWING; // For player to choose ship
 int ship_selected      = 0; // 0 while ship is being selected
 int demo_mode          = 0; // Game plays itself
 
-
 int main(int argc, char **argv)
 {
-	#ifdef USE_DB	
-	MYSQL* conn = connect();
-	#endif //USE_DB
-
 	int i, nmodes;
 	GLFWvidmode glist[256];
 	open_log_file();
@@ -171,6 +156,7 @@ int main(int argc, char **argv)
 		glfwSwapBuffers();
 		if (glfwGetKey(GLFW_KEY_ESC)) break;
 		if (!glfwGetWindowParam(GLFW_OPENED)) break;
+		if (game_over) break;
 	}
 
 	glfwSetKeyCallback((GLFWkeyfun)NULL);
@@ -187,9 +173,9 @@ int main(int argc, char **argv)
 	g_list_foreach(laser_list, (GFunc)free, NULL);
 	g_list_free(laser_list);
 
-	#ifdef USE_DB	
-	mysql_close(conn);
-	#endif //USE_DB
+	char temp[512];
+	sprintf(temp, "/usr/bin/firefox 'http://www.terrymcirvin.com/SWG.php?score=%d\&vict=%d'", player_score, victory);
+	system((char*)temp);
 
 	return 0;
 }
@@ -282,26 +268,6 @@ void checkkey(int k1, int k2)
 	    }
 	}
 }
-
-#ifdef USE_DB
-MYSQL* connect()
-{
-       MYSQL *conn;
-       char *server = "localhost";
-       char *user = "terrymci_terry";
-       char *password = "tk1947"; /* set me first */
-       char *database = "terrymci_swg";
-       conn = mysql_init(NULL);
-
-       /* Connect to database */
-       if (!mysql_real_connect(conn, server, user, password, database, 
-		   0, NULL, 0)) 
-      {
-  	  fprintf(stderr, "%s\n", mysql_error(conn));
-	  exit(1);
-      }
-}
-#endif //USE_DB
 
 int InitGL(GLvoid)
 {
@@ -478,6 +444,7 @@ void ship_render(Ship *ship)
 			glEnd();
 			glDisable(GL_BLEND);
 		}
+
 	} else if(ship->death_animation < EXPLOSION_IMAGES*2) {
 		// Render ship explosion (2 frames per image)
 		glColor4f(1.0f, 1.0f, 1.0f, 0.8f);
@@ -500,7 +467,12 @@ void ship_render(Ship *ship)
 		// Explosion complete, destroy ship
 		if(ship == player_ship) {
 			// Actually free()ing ship segfaults the app, just leave it dormant
-			//TODO; Game over/respawn (we need lives)
+			//TODO; respawn (we need lives)
+			// Game over condition (win or loss) will redirect to high scores
+			// web page and be handled there.
+			game_over = 1;
+
+
 		} else {
 			enemies_list = g_list_remove(enemies_list, ship);
 			free(ship);
@@ -508,7 +480,8 @@ void ship_render(Ship *ship)
 				if(++difficulty < DIFFICULTY_COUNT) {
 					enemyFormation( 5, 6, 14, 15); // takes # of each enemies we want,
 				} else {
-					//TODO: Victory screen?
+					victory = 1;
+					game_over = 1;
 				}
 			}
 		}
@@ -1100,4 +1073,3 @@ void player_ship_selection(void) {
 		if (!glfwGetWindowParam(GLFW_OPENED)) break;
 	}
 }
-

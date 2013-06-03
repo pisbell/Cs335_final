@@ -333,7 +333,6 @@ void render(GLvoid)
 
 	if (show_lasers) {
 		g_list_foreach(laser_list, (GFunc)laser_render, NULL);
-		glLineWidth(1);
 	}
 	glDisable(GL_BLEND);
 
@@ -502,15 +501,26 @@ void level_spawn()
 }
 
 void laser_render(Laser *node) {
+	if(!node->linewidth)
+		return;
 	glPushMatrix();
 	glTranslated(node->pos[0],node->pos[1],node->pos[2]);
 	glColor4fv(node->color);
-	glLineWidth(node->linewidth);
-	float scale = sqrtf(node->vel[0] * node->vel[0] + node->vel[1] * node->vel[1]) / node->length;
-	glBegin(GL_LINES);
-		glVertex2f(0.0f, 0.0f);
-		glVertex2f(node->vel[0]/scale, node->vel[1]/scale);
-	glEnd();
+	glRotatef(180*atanf(node->vel[1]/node->vel[0])/3.141592, 0.0, 0.0, 1.0);
+	if(node->linewidth <= 10) { // Small enough to use GL_LINES
+		glLineWidth(node->linewidth);
+		glBegin(GL_LINES);
+			glVertex2f(0.0f, 0.0f);
+			glVertex2f(node->length, 0.0f);
+		glEnd();
+	} else {
+		glBegin(GL_QUADS);
+			glVertex2f(0, node->linewidth/2);
+			glVertex2f(0, -1 * node->linewidth/2);
+			glVertex2f(node->length, -1 * node->linewidth/2);
+			glVertex2f(node->length, node->linewidth/2);
+		glEnd();
+	}
 	glPopMatrix();
 }
 
@@ -699,6 +709,9 @@ void ship_laser_check_collision(Ship *ship, Laser **dplaser) {
 	if(*dplaser == NULL)
 		return;
 
+	if((*dplaser)->linewidth == beamwidth) // Death star beam doesn't collide (would look bad)
+		return;
+
 	Laser *laser = *dplaser;
 	if(laser->team != ship->team) {
 		//collision detection for laser on ship
@@ -827,9 +840,10 @@ void deathStar_physics() {
 			// Done charging
 			int playspace = random((xres-pad-70));
 			for(i=0; i< 7; i++) {
-				turrets[i]->laser_width = 10;
+				turrets[i]->laser_width = 0;
 				targets[i]->pos[0] = playspace+(i*10)+halfpad;
 			}
+			turrets[3]->laser_width = beamwidth;
 			targets[7]->is_vulnerable = 0;
 			deathStar_charging = chargemin; // Wait before beginning to charge again
 			deathStar_cannon = cannonmax; // Begin firing

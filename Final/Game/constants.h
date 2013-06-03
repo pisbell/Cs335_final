@@ -129,6 +129,7 @@ float statsDodgeRadius[SHIP_COUNT][DIFFICULTY_COUNT] = {
 int chargemax = 7000;
 int chargemin = -30000;
 int cannonmax = 1000;
+int beamwidth = 100;
 
 
 // Screen settings

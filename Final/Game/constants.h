@@ -27,6 +27,7 @@
 #define DIFFICULTY_MEDIUM 1
 #define DIFFICULTY_HARD   2
 #define DIFFICULTY_COUNT  3
+#define LEVEL_COUNT       15
 
 // Stats for different ships at different difficulties.
 int statsHealth[SHIP_COUNT][DIFFICULTY_COUNT] = { 
@@ -34,8 +35,8 @@ int statsHealth[SHIP_COUNT][DIFFICULTY_COUNT] = {
     {  50,  75, 150},
     { 200, 300, 400},
     { 300, 400, 500},
-    {1000, 800, 650},
-    { 800, 750, 600},
+    {1000,1000,1000},
+    { 800, 800, 800},
     {0,0,0}
 };
 int statsShields[SHIP_COUNT][DIFFICULTY_COUNT] = {
@@ -43,8 +44,8 @@ int statsShields[SHIP_COUNT][DIFFICULTY_COUNT] = {
     { 150, 225, 350},
     {  50,  75, 150},
     { 100, 200, 300},
-    {1000, 700, 500},
-    { 750, 500, 350},
+    {1000,1000,1000},
+    { 750, 750, 750},
     {0,0,0}
 };
 int statsDamage[SHIP_COUNT][DIFFICULTY_COUNT] = {
@@ -58,12 +59,12 @@ int statsDamage[SHIP_COUNT][DIFFICULTY_COUNT] = {
 };
 int statsShotfreq[SHIP_COUNT][DIFFICULTY_COUNT] = {
     {  10,  25,  40},
-    {   5,  12,  15},
-    { 100,  70,  95},
-    {   5,  10,  15},
+    {   5,   7,  10},
+    { 100, 110, 120},
+    {   5,  10,  20},
     {   5,   5,   5},
     {   7,   7,   7},
-    {2,1,1}
+    {25,30,45}
 };
 float statsSpeed[SHIP_COUNT][DIFFICULTY_COUNT] = {
     { 0.75,  1.0,  1.5},
@@ -125,8 +126,8 @@ float statsDodgeRadius[SHIP_COUNT][DIFFICULTY_COUNT] = {
 
 
 // Death star settings
-int chargemax = 200;
-int chargemin = -10000;
+int chargemax = 7000;
+int chargemin = -30000;
 int cannonmax = 1000;
 
 

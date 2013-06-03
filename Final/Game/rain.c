@@ -83,6 +83,7 @@ GLuint explosion_textures[EXPLOSION_IMAGES];
 void ship_render(Ship *ship);
 Ship* ship_create(int shiptype, int team, int xpos, int ypos);
 
+void level_spawn();
 void laser_move_frame(Laser *node);
 void laser_check_collision(Laser *node);
 void laser_render(Laser *node);
@@ -93,8 +94,9 @@ double shottimer       = 0;
 int show_lasers        = 1;
 int show_text          = 1;
 int difficulty         = DIFFICULTY_EASY;
+int level              = 1;
 int player_score       = 0;
-int deathStar_charging = -1000;
+int deathStar_charging = -10000;
 int deathStar_cannon   = 0;
 int ship_select        = SHIP_XWING; // For player to choose ship
 int ship_selected      = 0; // 0 while ship is being selected
@@ -132,8 +134,8 @@ int main(int argc, char **argv)
 
 	player_ship_selection();
 	player_ship = ship_create(ship_select, TEAM_REBELS, xres/2, 100.0); 
-	
-	enemyFormation( 5, 6, 14, 15); // takes # of each enemies we want,
+	difficulty--;
+	level_spawn();
 	glfwSetKeyCallback((GLFWkeyfun)(checkkey));
 	while(1) {
 		for (i=0; i<time_control; i++)
@@ -282,7 +284,7 @@ int InitGL(GLvoid)
 		turrets[i] = ship_create(SHIP_TURRET, TEAM_EMPIRE, (xres/4)+ (i*10)+45, yres - (abs(4-i)*5)-10);
 		targets[i] = ship_create(SHIP_TURRET, TEAM_REBELS, 0, 100);
 	}
-    targets[7] = ship_create(SHIP_TURRET, TEAM_REBELS, (xres/4)+70, yres-200);
+    targets[7] = ship_create(SHIP_TURRET, TEAM_REBELS, (xres/4)+70, yres-150);
 
 	return 1;
 }
@@ -462,8 +464,9 @@ void ship_render(Ship *ship)
 			enemies_list = g_list_remove(enemies_list, ship);
 			free(ship);
 			if(enemies_list == NULL) {
-				if(++difficulty < DIFFICULTY_COUNT) {
-					enemyFormation( 5, 6, 14, 15); // takes # of each enemies we want,
+				if(++level < LEVEL_COUNT) {
+				    level_spawn();
+					//enemyFormation( 5, 6, 14, 15); // takes # of each enemies we want,
 				} else {
 					victory = 1;
 					game_over = 1;
@@ -473,6 +476,29 @@ void ship_render(Ship *ship)
 	}
 
 	glPopMatrix();
+}
+
+void level_spawn()
+{
+    switch(level % 5)
+    {
+	case 0:
+	    enemyFormation(10,15,15,20);
+	    break;
+	case 1:
+	    difficulty++;
+	    enemyFormation(0,0,10,15);
+	    break;
+	case 2:
+	    enemyFormation(0,5,10,15);
+	    break;
+	case 3:
+	    enemyFormation(2,10,10,15);
+	    break;
+	case 4:
+	    enemyFormation(5,10,10,20);
+	    break;
+    }
 }
 
 void laser_render(Laser *node) {
@@ -792,14 +818,14 @@ void deathStar_physics() {
 	if (deathStar_charging > 0) {
 		deathStar_charging--;
 		// Currently charging laser
-
-	    for (i=0; i < 7; i++)
+		if (deathStar_charging > 200){
+		    for (i=0; i < 7; i++)
 			if(random(1000) < turrets[i]->shotfreq)
-				laser_fire(turrets[i], targets[7]);
-
-	    if (deathStar_charging == 0) {
+			    laser_fire(turrets[i], targets[7]);
+		}
+		if (deathStar_charging == 1) {
 			// Done charging
-			int playspace = random(xres-pad-70);
+			int playspace = random((xres-pad-70));
 			for(i=0; i< 7; i++) {
 				turrets[i]->laser_width = 10;
 				targets[i]->pos[0] = playspace+(i*10)+halfpad;
@@ -813,8 +839,8 @@ void deathStar_physics() {
 	if(deathStar_cannon > 0) {
 		deathStar_cannon--;
 	    for(i=0; i < 7; i++)
-			if(random(10) < 5)
-				laser_fire(turrets[i],targets[i]);
+			if(random(10) < 4)
+				laser_fire(turrets[i], targets[i]);
 	}
 
 }

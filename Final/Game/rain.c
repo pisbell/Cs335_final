@@ -92,7 +92,7 @@ void deathStar_physics();
 
 double shottimer       = 0;
 int show_lasers        = 1;
-int show_text          = 1;
+int show_text          = 0;
 int difficulty         = DIFFICULTY_EASY;
 int level              = 1;
 int player_score       = 0;
@@ -339,6 +339,11 @@ void render(GLvoid)
 	ship_render(player_ship);
 	g_list_foreach(enemies_list, (GFunc)ship_render, NULL);
 
+	Rect t;
+	t.left = 10;
+	t.bot = yres - 50;
+	t.center = 0;
+	ggprint16(&t, 16, 0x00aaaa00, "Score: %d", player_score);
 	if (show_text) {
 		//draw some text
 		Rect r;
@@ -360,7 +365,6 @@ void render(GLvoid)
 		ggprint16(&r, 16, 0x00aaaa00, "<-> Cycle teams; %s",player_ship->team==TEAM_REBELS?"Rebels":"Empire");
 		ggprint16(&r, 16, 0x00aaaa00, "    Player health; %d",player_ship->health);
 		ggprint16(&r, 16, 0x00aaaa00, "    Player Shields; %d",player_ship->shields);
-		ggprint16(&r, 16, 0x00aaaa00, "    Player Score;  %d", player_score);
 	}
 }
 

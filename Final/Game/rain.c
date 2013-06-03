@@ -174,7 +174,7 @@ int main(int argc, char **argv)
 	g_list_free(laser_list);
 
 	char temp[512];
-	sprintf(temp, "/usr/bin/firefox 'http://www.terrymcirvin.com/SWG.php?score=%d\&vict=%d'", player_score, victory);
+	sprintf(temp, "xdg-open 'http://www.terrymcirvin.com/SWG.php?score=%d\&vict=%d'", player_score, victory);
 	system((char*)temp);
 
 	return 0;

@@ -14,18 +14,7 @@
 
 #include "constants.h"
 #include "defs.h"
-
-//These components can be turned on and off
-#define USE_FONTS
-#define USE_LOG
-
-#ifdef USE_LOG
-#include "log.h"
-#endif //USE_LOG
-
-#ifdef USE_FONTS
 #include "fonts.h"
-#endif //USE_FONTS
 
 //macros
 #define rnd() (((double)rand())/(double)RAND_MAX)
@@ -136,12 +125,10 @@ int main(int argc, char **argv)
 	glfwDisable( GLFW_MOUSE_CURSOR );
 	InitGL();
 
-	#ifdef USE_FONTS
 	glShadeModel(GL_SMOOTH);
 	//texture maps must be enabled to draw fonts
 	glEnable(GL_TEXTURE_2D);
 	initialize_fonts();
-	#endif //USE_FONTS
 
 	player_ship_selection();
 	player_ship = ship_create(ship_select, TEAM_REBELS, xres/2, 100.0); 
@@ -163,9 +150,8 @@ int main(int argc, char **argv)
 	glfwSetMousePosCallback((GLFWmouseposfun)NULL);
 	close_log_file();
 	glfwTerminate();
-	#ifdef USE_FONTS
+
 	cleanup_fonts();
-	#endif //USE_FONTS
 
 	free(player_ship);
 	g_list_foreach(enemies_list, (GFunc)free, NULL);
@@ -331,7 +317,6 @@ void render_bg(void) {
 
 void render(GLvoid)
 {
-	//Log("render()...\n");
 	glfwGetWindowSize(&xres, &yres);
 	glViewport(halfpad, 0, xres-pad, yres);
 	//clear color buffer
@@ -785,7 +770,8 @@ void ship_enemy_move_logic(Ship *ship) {
 void deathStar_physics() {
 	// deathStar_charging begins at a negative value (chargemin) and is incremented continually, meanwhile the deathStar is dormant.
 	// deathStar_charging triggers the "charging" stage when it hits 0. it is bumped to a large positive value (chargemax).
-	// deathStar_charging causes lasers to fire into the center of the deathStar when positive, a "charging" animation. it is decremented during this time.
+	// deathStar_charging causes lasers to fire into the center of the deathStar when positive, a "charging" animation. 
+	// it is decremented during this time.
 	// after it hits 0 again, the charging cycle is reset and the deathStar begins firing, using deathStar_cannon as a timer.
 	int i;
 

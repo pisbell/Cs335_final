@@ -78,6 +78,7 @@ Ship *targets[8]    = {NULL, NULL, NULL,NULL,NULL,NULL,NULL, NULL};
 Ship *turrets[7]    = {NULL, NULL, NULL,NULL,NULL,NULL,NULL};
 GLuint ship_textures[SHIP_COUNT];
 GLuint background_texture;
+GLuint cannon_laser_texture;
 GLuint explosion_textures[EXPLOSION_IMAGES];
 
 void ship_render(Ship *ship);
@@ -266,6 +267,7 @@ int InitGL(GLvoid)
 	glClearColor(0.1f, 0.2f, 0.3f, 0.0f);
 	
 	background_texture = loadBMP("bg.bmp");
+	cannon_laser_texture = tex_readgl_bmp("cannon_laser.bmp",1);
     ship_textures[SHIP_FIGHTER] = tex_readgl_bmp("Fighter.bmp", 1.0);
     ship_textures[SHIP_BOMBER] = tex_readgl_bmp("Bomber.bmp", 1.0);
     ship_textures[SHIP_INTERCEPTER] = tex_readgl_bmp("Interceptor.bmp", 1.0);
@@ -503,6 +505,7 @@ void level_spawn()
 void laser_render(Laser *node) {
 	if(!node->linewidth)
 		return;
+
 	glPushMatrix();
 	glTranslated(node->pos[0],node->pos[1],node->pos[2]);
 	glColor4fv(node->color);
@@ -514,12 +517,27 @@ void laser_render(Laser *node) {
 			glVertex2f(node->length, 0.0f);
 		glEnd();
 	} else {
+
+		glColor4f(1.0f, 1.0f, 1.0f, 0.8f);
+		//glPushMatrix();
+		//glTranslatef(node->pos[0], node->pos[1], node->pos[2]);
+		//glEnable(GL_ALPHA_TEST);
+		//glAlphaFunc(GL_GREATER, 0.0f);
+		glBindTexture(GL_TEXTURE_2D, cannon_laser_texture);
 		glBegin(GL_QUADS);
-			glVertex2f(0, node->linewidth/2);
-			glVertex2f(0, -1 * node->linewidth/2);
-			glVertex2f(node->length, -1 * node->linewidth/2);
-			glVertex2f(node->length, node->linewidth/2);
+			float w = node->linewidth * 0.5;
+			glTexCoord2f(0.0f, 0.0f); glVertex2f(0, w);
+			glTexCoord2f(1.0f, 0.0f); glVertex2f(0, -w);
+			glTexCoord2f(1.0f, 1.0f); glVertex2f(node->length, -w);
+			glTexCoord2f(0.0f, 1.0f); glVertex2f(node->length, w);
+		//glBegin(GL_QUADS);
+		//	glVertex2f(0, node->linewidth/2);
+		//	glVertex2f(0, -1 * node->linewidth/2);
+		//	glVertex2f(node->length, -1 * node->linewidth/2);
+		//	glVertex2f(node->length, node->linewidth/2);
 		glEnd();
+	//	glBindTexture(GL_TEXTURE_2D, 0);
+		//glDisable(GL_ALPHA_TEST);
 	}
 	glPopMatrix();
 }

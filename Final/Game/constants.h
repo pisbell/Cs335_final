@@ -61,14 +61,14 @@ int statsShotfreq[SHIP_COUNT][DIFFICULTY_COUNT] = {
     {  10,  25,  40},
     {   5,   7,  10},
     { 100, 110, 120},
-    {   5,  10,  20},
+    {   7,  15,  25},
     {   5,   5,   5},
     {   7,   7,   7},
     {25,30,45}
 };
 float statsSpeed[SHIP_COUNT][DIFFICULTY_COUNT] = {
     { 0.75,  1.0,  1.5},
-    { 0.5 ,  2.0,  3.0},
+    { 0.5 , 0.75,  1.0},
     { 1.0 ,  2.0,  3.0},
     { 0.5 ,  1.0,  1.5},
     { 1.5 ,  1.5,  1.5},
@@ -126,7 +126,7 @@ float statsDodgeRadius[SHIP_COUNT][DIFFICULTY_COUNT] = {
 
 
 // Death star settings
-int chargemax = 7000;
+int chargemax = 5000;
 int chargemin = -30000;
 int cannonmax = 1000;
 int beamwidth = 100;

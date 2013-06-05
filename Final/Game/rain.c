@@ -345,6 +345,7 @@ void render(GLvoid)
 	t.left = 10;
 	t.bot = yres - 50;
 	t.center = 0;
+	ggprint16(&t, 16, 0x00aaaa00, "Level: %d", level);
 	ggprint16(&t, 16, 0x00aaaa00, "Score: %d", player_score);
 	ggprint16(&t, 16, 0x00aaaa00, "Health: %d",player_ship->health);
 	ggprint16(&t, 16, 0x00aaaa00, "Shields: %d",player_ship->shields);
@@ -471,7 +472,6 @@ void ship_render(Ship *ship)
 			if(enemies_list == NULL) {
 				if(++level < LEVEL_COUNT) {
 				    level_spawn();
-					//enemyFormation( 5, 6, 14, 15); // takes # of each enemies we want,
 				} else {
 					victory = 1;
 					game_over = 1;
@@ -521,27 +521,21 @@ void laser_render(Laser *node) {
 			glVertex2f(node->length, 0.0f);
 		glEnd();
 	} else {
-
+	        //bind cannon_laser_texture to the laser
 		glColor4f(1.0f, 1.0f, 1.0f, 0.8f);
-		//glPushMatrix();
-		//glTranslatef(node->pos[0], node->pos[1], node->pos[2]);
-		//glEnable(GL_ALPHA_TEST);
-		//glAlphaFunc(GL_GREATER, 0.0f);
 		glBindTexture(GL_TEXTURE_2D, cannon_laser_texture);
 		glBegin(GL_QUADS);
 			float w = node->linewidth * 0.5;
-			glTexCoord2f(0.0f, 0.0f); glVertex2f(0, w);
-			glTexCoord2f(1.0f, 0.0f); glVertex2f(0, -w);
-			glTexCoord2f(1.0f, 1.0f); glVertex2f(node->length, -w);
-			glTexCoord2f(0.0f, 1.0f); glVertex2f(node->length, w);
-		//glBegin(GL_QUADS);
-		//	glVertex2f(0, node->linewidth/2);
-		//	glVertex2f(0, -1 * node->linewidth/2);
-		//	glVertex2f(node->length, -1 * node->linewidth/2);
-		//	glVertex2f(node->length, node->linewidth/2);
+			glTexCoord2f(0.0f, 0.0f);
+			glVertex2f(0, w);
+			glTexCoord2f(1.0f, 0.0f);
+			glVertex2f(0, -w);
+			glTexCoord2f(1.0f, 1.0f);
+			glVertex2f(node->length, -w);
+			glTexCoord2f(0.0f, 1.0f);
+			glVertex2f(node->length, w);
 		glEnd();
-	//	glBindTexture(GL_TEXTURE_2D, 0);
-		//glDisable(GL_ALPHA_TEST);
+		glBindTexture(GL_TEXTURE_2D, 0);
 	}
 	glPopMatrix();
 }
@@ -873,10 +867,18 @@ void deathStar_physics() {
 	}
 
 	if(deathStar_cannon > 0) {
-		deathStar_cannon--;
-	    for(i=0; i < 7; i++)
-			if(random(10) < 4)
-				laser_fire(turrets[i], targets[i]);
+	    deathStar_cannon--;
+	    if ( difficulty < DIFFICULTY_HARD)
+	    {
+		for(i=0; i < 7; i++)
+		    if(random(10) < 4)
+			laser_fire(turrets[i], targets[i]);
+	    }
+	    else{
+		for(i=0; i < 7; i++)
+		    if(random(10) < 4)
+			laser_fire(turrets[i], player_ship);
+	    }
 	}
 
 }
